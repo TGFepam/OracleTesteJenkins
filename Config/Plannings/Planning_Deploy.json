@@ -1,0 +1,16 @@
+{
+    "autor": "Tiago Gabriel",
+    "data": "2026-06-22",
+    "descricao": "Teste de deploy de objetos para configuração do Jenkins",
+    "acoes": {
+        "matarSessoes": false,
+        "listarInvalidos": true,
+        "recompilarObjetos": true
+    },
+    "objetos": [
+        {
+            "nome": "Packages/pck_teste_jenkins.pck",
+            "descricao": "Package de teste do Jenkins"
+        }
+    ]
+}
