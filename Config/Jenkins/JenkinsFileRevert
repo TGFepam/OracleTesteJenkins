@@ -169,7 +169,7 @@ pipeline {
                         '',
 
                         'Ações',
-                        'Matar sessões: ' + jsonPlan.acoes.matarSessoes ? 'SIM' : 'NÃO',
+                        "Matar sessões: ${jsonPlan.acoes.matarSessoes ? 'SIM' : 'NÃO'}",
                         'Listar inválidos: ' + jsonPlan.acoes.listarInvalidos ? 'SIM' : 'NÃO',
                         'Recompilar objetos: ' + jsonPlan.acoes.recompilarObjetos ? 'SIM' : 'NÃO',
                         '',
