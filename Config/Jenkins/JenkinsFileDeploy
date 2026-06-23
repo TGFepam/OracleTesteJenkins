@@ -29,8 +29,7 @@ pipeline {
     agent any
     environment {
         // Credencial de conexão com o banco de dados
-        //DB_CONN = credentials('DevOps_DB')
-        DB_CONN = credentials('TiagoDB')
+        DB_CONN = credentials('DevOps_DB')
     }
 
     options {
