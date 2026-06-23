@@ -109,9 +109,6 @@ pipeline {
                         jsonData = lib.processaJSON(dataFile, 'do banco de dados')
                         jsonPlan = lib.processaJSON(planFile, 'do planejamento para o deploy')
 
-                        if (consistRevert) {
-                            jsonRevt = lib.processaJSON(revtFile, 'do planejamento para o revert')
-                        }
                     } catch (hudson.AbortException e) {
                         throw e
                     } catch (Exception e) {
@@ -213,10 +210,10 @@ pipeline {
                             error "Arquivo ${diretorioRaiz}/${obj.nome} programado para deploy não encontrado"
                         }
                         echo "Arquivo: ${diretorioRaiz}/${obj.nome}"
+
                         // Verifica encoding do arquivo
-                        /* O comando uchardet está retornando o erro: command not found
-                        comando = "uchardet ${script}"
-                        retorno = sh(script: comando, returnStdout: true).trim().toUpperCase()*/
+                        //comando = "uchardet ${diretorioRaiz}/${obj.nome}"
+                        //retorno = sh(script: comando, returnStdout: true).trim().toUpperCase()
 
                         comando = "file -bi ${diretorioRaiz}/${obj.nome} | awk -F'charset=' '{print \$2}'"
                         retorno = sh(script: comando, returnStdout: true).trim().toUpperCase()

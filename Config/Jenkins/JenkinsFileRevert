@@ -206,25 +206,23 @@ pipeline {
                     jsonPlan.objetos.each { obj ->
                         // Verifica a existência do arquivo
                         if (!fileExists(file: "${diretorioRaiz}/${obj.nome}")) {
-                                error "Arquivo ${diretorioRaiz}/${obj.nome} programado para revert não encontrado"
-                            }
-                            echo "Arquivo: ${diretorioRaiz}/${obj.nome}"
+                            error "Arquivo ${diretorioRaiz}/${obj.nome} programado para deploy não encontrado"
+                        }
+                        echo "Arquivo: ${diretorioRaiz}/${obj.nome}"
 
-                            // Verifica encoding do arquivo
-                            /* O comando uchardet está retornando o erro: command not found
-                            comando = "uchardet ${script}"
-                            retorno = sh(script: comando, returnStdout: true).trim().toUpperCase()*/
+                        // Verifica encoding do arquivo
+                        //comando = "uchardet ${script}"
+                        //retorno = sh(script: comando, returnStdout: true).trim().toUpperCase()*/
 
-                            comando = "file -bi ${diretorioRaiz}/${obj.nome} | awk -F'charset=' '{print \$2}'"
-                            retorno = sh(script: comando, returnStdout: true).trim().toUpperCase()
+                        comando = "file -bi ${diretorioRaiz}/${obj.nome} | awk -F'charset=' '{print \$2}'"
+                        retorno = sh(script: comando, returnStdout: true).trim().toUpperCase()
 
-                            // ASCII é um subset do UTF-8 e apenas indica um arquivo sem acentos ou caracteres especias
-                            if (retorno in ['US-ASCII', 'UTF-8']) {
-                                echo "Encoding válido: ${retorno}"
-                            } else {
-                                echo "Encoding inválido: ${retorno}"
-                                error "Arquivo ${diretorioRaiz}/${obj.nome} programado para revert não está em UTF-8"
-                            }
+                        // ASCII é um subset do UTF-8 e apenas indica um arquivo sem acentos ou caracteres especias
+                        if (retorno in ['US-ASCII', 'UTF-8']) {
+                            echo "Encoding válido: ${retorno}"
+                        } else {
+                            echo "Encoding inválido: ${retorno}"
+                            error "Arquivo ${diretorioRaiz}/${obj.nome} programado para revert não está em UTF-8"
                         }
                     }
                     echo 'Final da Validação dos Tipos de Arquivos Planejados Para Revert'
