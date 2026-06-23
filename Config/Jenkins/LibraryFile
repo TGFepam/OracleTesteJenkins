@@ -1,0 +1,73 @@
+/*--------------------------------------------------
+    Processamento dos JSONs
+--------------------------------------------------*/
+def processaJSON(String jsonFile, String descricao) {
+    def disp = [
+        "Arquivo JSON ${descricao}"
+    ]
+    if (fileExists(file: jsonFile)) {
+        disp << 'Arquivo encontrado'
+        def jsonParsed = readJSON file: jsonFile
+        if (jsonParsed) {
+            disp << 'Arquivo parseado'
+            echo disp.join('\n')
+            return jsonParsed
+        } else {
+            disp << 'Arquivo inválido ou vazio!'
+            echo disp.join('\n')
+            error "Arquivo JSON ${descricao} inválido ou vazio"
+        }
+    } else {
+        disp << 'Arquivo não encontrado'
+        echo disp.join('\n')
+        error "Arquivo JSON ${descricao} não encontrado"
+    }
+}
+
+
+/*--------------------------------------------------
+    Execução de um script no SQL*Plus
+--------------------------------------------------*/
+def executaScript(String nome, String conexao) {
+    def comando = 'export LD_LIBRARY_PATH=/opt/oracle/instantclient_21_10\n' +
+                    'export PATH=$LD_LIBRARY_PATH:$PATH\n' +
+                    'export NLS_LANG=AMERICAN_AMERICA.WE8ISO8859P1\n' +
+                    """echo "@${nome}" | sqlplus "${conexao}";\n"""
+    def retorno = sh(script: comando, returnStdout: true)
+    return retorno
+}
+
+
+/*--------------------------------------------------
+    Starter do build
+--------------------------------------------------*/
+def getBuildStarter() {
+    def causes = currentBuild.rawBuild.getCauses()
+    def result = []
+
+    for (c in causes) {
+        switch (true) {
+            case c instanceof hudson.model.Cause$UserIdCause:
+                result << c.getUserName()
+                break
+            case c instanceof hudson.triggers.TimerTrigger$TimerTriggerCause:
+                result << 'Agendado (cron)'
+                break
+            case c instanceof hudson.triggers.SCMTrigger$SCMTriggerCause:
+                result << 'SCM (commit/polling)'
+                break
+            case c instanceof hudson.model.Cause$UpstreamCause:
+                result << "Upstream job: ${c.getUpstreamProject()} #${c.getUpstreamBuild()}"
+                break
+            case c instanceof org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper:
+                return 'Outro job'
+                break
+            default:
+                result << c.toString()
+                break
+        }
+    }
+    return (result.unique()).join('  |  ')
+}
+
+return this
