@@ -207,6 +207,9 @@ def createLog(Map args) {
     def jobName     = args.jobName
     def workspace   = args.workspace
 
+    echo 'Dentrop da function antes do log'
+
+
     def timestamp = new Date().format('yyyyMMdd_HHmmss')
 
     log.name = "log/${action}__${tag}__${timestamp}__${buildNumber}.log"
@@ -217,6 +220,10 @@ def createLog(Map args) {
     if (!path.isDirectory()) {
         path.mkdirs()
     }
+
+
+    echo 'preparando o cabeçlho do log'
+
 
     // Prepara o cabeçalho
     log.text = [
