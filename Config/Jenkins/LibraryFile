@@ -1,13 +1,16 @@
+import groovy.transform.Field
+
+
 /*--------------------------------------------------
     Variável do log
 --------------------------------------------------*/
 @Field
 def log = [
     create: true, // Indica a criação do arquivo
-    name  : null,  // Nome do arquivo
-    handle: null,  // Handle do arquivo
-    text  : [],    // Bloco para agrupar um texto para entrada única
-    buffer: []     // Buffer que acumula as linhas que serão descarregadas no arquivo
+    name  : null, // Nome do arquivo
+    handle: null, // Handle do arquivo
+    text  : [],   // Bloco para agrupar um texto para entrada única
+    buffer: []    // Buffer que acumula as linhas que serão descarregadas no arquivo
 ]
 
 
