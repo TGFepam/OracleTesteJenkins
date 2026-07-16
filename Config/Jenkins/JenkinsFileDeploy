@@ -151,7 +151,6 @@ pipeline {
 
 
 
-                    echo depois
 
                     // Carrega o indicativo da consistência do revert
                     consistRevert = jsonConf.consistRevert
