@@ -113,8 +113,8 @@ pipeline {
                         throw e
                     } catch (Exception e) {
                         //echo "Erro: ${e.getMessage()}"
-                        echo lib.status('E', "Arquivo JSON de configuração não pode ser carregado: ${e.getMessage()}"
-                        error 'Falha lendo/parseando arquivos JSON de configuração'
+                        echo lib.status('E', "Arquivo JSON de configuração não pode ser carregado: ${e.getMessage()}")
+                        error lib.status('E', 'Falha lendo/parseando arquivos JSON de configuração')
                     }
 
                     // Inicializa a variável que determina a criação do log da biblioteca
