@@ -1,7 +1,8 @@
 {
     "autor": "Tiago Gabriel",
-    "data": "2026-06-22",
-    "descricao": "Teste de deploy de objetos para configuração do Jenkins",
+    "data": "2026-07-16",
+    "descricao": "Teste do Jenkins",
+    "tag": "v2026.07.16.01",
     "acoes": {
         "matarSessoes": false,
         "listarInvalidos": true,
@@ -10,7 +11,7 @@
     "objetos": [
         {
             "nome": "Packages/pck_teste_jenkins.pck",
-            "descricao": "Package de teste do Jenkins"
+            "descricao": "Teste do Jenkins"
         }
     ]
 }
