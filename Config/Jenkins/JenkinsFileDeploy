@@ -125,7 +125,7 @@ pipeline {
                         error lib.status('E', 'Falha lendo/parseando arquivos JSON de configuração')
                     }
 
-                    // Inicializa a variável que determina a criação do log da biblioteca
+                    // Inicializaz'a variável que determina a criação do log da biblioteca
                     lib.log.create = jsonConf.createLog
 
                     echo 'Antes de criar o arquivo de log'
@@ -138,11 +138,19 @@ pipeline {
                             jobName    : env.JOB_NAME,
                             workspace  : env.WORKSPACE
                         )
-                    } catch (Exception e) {
+                    } catch (Throwable e) {
                         //echo "Erro: ${e.getMessage()}"
                         echo lib.status('A', "Arquivo de log não pode ser criado:\n${e.getMessage()}")
+                        echo lib.status('A', "Arquivo de log não pode ser criado:\n${e.toString()}")
                         lib.log.create = false
                     }
+                    echo 'depois'
+
+
+
+
+
+
                     echo depois
 
                     // Carrega o indicativo da consistência do revert
