@@ -17,9 +17,9 @@ def log = [
 /*--------------------------------------------------
     Processamento dos JSONs
 --------------------------------------------------*/
-def parseJSON(String jsonFile, String descricao) {
+def parseJSON(String jsonFile, String description) {
     def text = [
-        "Arquivo JSON ${descricao}"
+        "Arquivo JSON ${description}"
     ]
     if (fileExists(file: jsonFile)) {
         text << 'Arquivo encontrado'
@@ -31,12 +31,12 @@ def parseJSON(String jsonFile, String descricao) {
         } else {
             text << 'Arquivo inválido ou vazio!'
             echo text.join('\n')
-            error "Arquivo JSON ${descricao} inválido ou vazio"
+            error "Arquivo JSON ${description} inválido ou vazio"
         }
     } else {
         text << 'Arquivo não encontrado'
         echo text.join('\n')
-        error "Arquivo JSON ${descricao} não encontrado"
+        error "Arquivo JSON ${description} não encontrado"
     }
 }
 
@@ -44,12 +44,43 @@ def parseJSON(String jsonFile, String descricao) {
 /*--------------------------------------------------
     Execução de script no SQL*Plus
 --------------------------------------------------*/
-def runScript(String nome, String conexao) {
-    def comando = 'export LD_LIBRARY_PATH=/opt/oracle/instantclient_21_10\n' +
-                    'export PATH=$LD_LIBRARY_PATH:$PATH\n' +
-                    'export NLS_LANG=AMERICAN_AMERICA.WE8ISO8859P1\n' +
-                    """echo "@${nome}" | sqlplus "${conexao}";\n"""
-    def retorno = sh(script: comando, returnStdout: true)
+def runScript(String script, String connection, String objectType = '') {
+    // Lista dos objetos que terão o show errors
+    def objetosDetalhar = [
+        'function',
+        'package',
+        'procedure',
+        'trigger'
+    ]
+    def comando
+    def input
+
+    if (!objectType) {
+        comando = 'export LD_LIBRARY_PATH=/opt/oracle/instantclient_21_10\n' +
+                  'export PATH=$LD_LIBRARY_PATH:$PATH\n' +
+                  'export NLS_LANG=AMERICAN_AMERICA.WE8ISO8859P1\n' +
+                  """echo "@${script}" | sqlplus "${connection}";\n"""
+    } else {
+        // Se o tipo do objeto estiver na lista, depois do script roda o show errors
+        if (objectType in objetosDetalhar) {
+            input = '(echo "@' + script + '"; echo "show errors")'
+        } else {
+            input = 'echo "@' + script + '"'
+        }
+        comando = 'export LD_LIBRARY_PATH=/opt/oracle/instantclient_21_10\n' +
+                  'export PATH=$LD_LIBRARY_PATH:$PATH\n' +
+                  'export NLS_LANG=AMERICAN_AMERICA.WE8ISO8859P1\n' +
+                  """${input} | sqlplus "${connection}";\n"""
+    }
+
+    try {
+        def retorno = sh(script: comando, returnStdout: true)
+    } catch (Exception e) {
+        // Erro crítico na execução do comando: coloca na console e aborta
+        echo status('E', "Falha rodando script no SQL*Plus:\n${e.getMessage()}")
+        error status('E', "Falha carregando a biblioteca")
+    }
+    
     return retorno
 }
 
