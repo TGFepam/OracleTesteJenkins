@@ -130,10 +130,9 @@ pipeline {
                             jobName    : env.JOB_NAME,
                             workspace  : env.WORKSPACE
                         )
-
                     } catch (Exception e) {
                         //echo "Erro: ${e.getMessage()}"
-                        echo lib.status('A', "Arquivo de log não pode ser criado: ${e.getMessage()}"
+                        echo lib.status('A', "Arquivo de log não pode ser criado: ${e.getMessage()}")
                     }
 
                     // Inicializa o nome dos scripts das ações
@@ -264,7 +263,7 @@ pipeline {
                         lib.text('')
                     ]
                     //echo texto.join('\n')
-                    echo writeText(texto)
+                    echo lib.writeText(texto)
 
                     // Verifica ações ativas
                     if (!jsonPlan.acoes.matarSessoes &&
@@ -391,7 +390,7 @@ pipeline {
         stage('Lista Inválidos') {
             steps {
                 script {
-                    if (!acao.listarInvalidos) {
+                    if (!acao.listarInvalidos.executar) {
                         echo lib.status('A', 'Listagem de objetos inválidos após o revert está inativa no planejamento - nenhuma ação foi executada')
                         return
                     }
@@ -423,7 +422,7 @@ pipeline {
         stage('Recompila Objetos') {
             steps {
                 script {
-                    if (!acao.recompilarObjetos) {
+                    if (!acao.recompilarObjetos.executar) {
                         echo lib.status('A', 'Recompilação de objetos após o revert está inativa no planejamento - nenhuma ação foi executada')
                         return
                     }
