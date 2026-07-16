@@ -128,7 +128,7 @@ pipeline {
                     // Inicializa a variável que determina a criação do log da biblioteca
                     lib.log.create = jsonConf.createLog
 
-                    echo 'Cria arquivo de log'
+                    echo 'Antes de criar o arquivo de log'
                     try {
                         lib.createLog(
                             action     : 'deploy',
@@ -143,6 +143,7 @@ pipeline {
                         echo lib.status('A', "Arquivo de log não pode ser criado:\n${e.getMessage()}")
                         lib.log.create = false
                     }
+                    echo depois
 
                     // Carrega o indicativo da consistência do revert
                     consistRevert = jsonConf.consistRevert

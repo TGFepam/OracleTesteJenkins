@@ -198,6 +198,8 @@ def createLog(Map args) {
         return
     }
 
+    echo 'Antes das variáveis na criação'
+
     // Extrai os parâmetros nomeados do Map.
     //def action      = args.action ?: 'deploy' // Para definir um valor padrão
     def action      = args.action
@@ -207,7 +209,7 @@ def createLog(Map args) {
     def jobName     = args.jobName
     def workspace   = args.workspace
 
-    echo 'Dentrop da function antes do log'
+    echo 'depois das variáveis'
 
 
     def timestamp = new Date().format('yyyyMMdd_HHmmss')
