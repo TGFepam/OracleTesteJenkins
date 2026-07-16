@@ -103,12 +103,16 @@ def status(String status, String line) {
     switch (status.toUpperCase()[0]) {
         case 'S':
             message = "[SUCESSO]: ${line}"
+            break
         case 'A':
             message = "[ALERTA]: ${line}"
+            break
         case 'E':
             message = "[ERRO]: ${line}"
+            break
         default:
             message = line
+            break
     }
 
     addLogLine(message)

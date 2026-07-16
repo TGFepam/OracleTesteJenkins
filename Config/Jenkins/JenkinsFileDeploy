@@ -133,10 +133,9 @@ pipeline {
                             jobName    : env.JOB_NAME,
                             workspace  : env.WORKSPACE
                         )
-
                     } catch (Exception e) {
                         //echo "Erro: ${e.getMessage()}"
-                        echo lib.status('A', "Arquivo de log não pode ser criado: ${e.getMessage()}"
+                        echo lib.status('A', "Arquivo de log não pode ser criado: ${e.getMessage()}")
                     }
 
                     // Carrega o indicativo da consistência do revert
@@ -447,7 +446,7 @@ pipeline {
         stage('Recompila Objetos') {
             steps {
                 script {
-                    if (!acao.recompilarObjetos) {
+                    if (!acao.recompilarObjetos.executar) {
                         echo lib.status('A', 'Recompilação de objetos após o deploy está inativa no planejamento - nenhuma ação foi executada')
                         return
                     }
