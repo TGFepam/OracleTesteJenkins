@@ -1,7 +1,8 @@
 {
     "autor": "Tiago Gabriel",
-    "data": "2026-06-22",
-    "descricao": "Teste de revert de objetos para configuração do Jenkins",
+    "data": "2026-07-16",
+    "descricao": "Teste do Jenkins",
+    "tag": "v2026.07.16.01",
     "acoes": {
         "matarSessoes": false,
         "listarInvalidos": true,
@@ -10,7 +11,7 @@
     "objetos": [
         {
             "nome": "Scripts/S_20260622_01_TG_Remover_Procedure_PCK_TESTE_JENKINS.sql",
-            "descricao": "Remove a package PCK_TESTE_KENKINS"
+            "descricao": "Remove a função de teste do Jenkins"
         }
     ]
 }

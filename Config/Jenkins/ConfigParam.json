@@ -1,0 +1,9 @@
+{
+    "createLog": true,
+    "consistRevert": true,
+    "scripts": {
+        "killSessions": "Config/Scripts/KillSessions.sql",
+        "listInvalids": "Config/Scripts/ListInvalids.sql",
+        "compileObjects": "Config/Scripts/CompileObjects.sql"
+    }
+}
