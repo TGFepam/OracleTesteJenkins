@@ -97,12 +97,17 @@ pipeline {
                 script {
                     echo 'Início do Processo'
                     // Carrega a biblioteca
+                    echo 'Carrega a biblioteca'
                     try {
                         lib = load 'Config/Jenkins/LibraryFile'
                     } catch (Exception e) {
                         // Erro crítico: mostra na hora e aborta
-                        error "Falha carregando a biblioteca (Config/Jenkins/LibraryFile): ${e.getMessage()}"
+                        echo "Falha carregando a biblioteca (Config/Jenkins/LibraryFile): ${e.getMessage()}"
+                        //error "Falha carregando a biblioteca (Config/Jenkins/LibraryFile): ${e.getMessage()}"
                     }
+
+                    echo 'depois'
+                    error 'sair'
 
                     // Nome do arquivo de config
                     def confFile = 'Config/Jenkins/ConfigParam.json'
