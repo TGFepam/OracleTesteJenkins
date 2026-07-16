@@ -38,6 +38,9 @@ def acao = [
     ]
 ]
 
+// Variável para armazenar o diretório raiz do repositório
+def diretorioRaiz = ''
+
 // Variável para display de texto em bloco
 def texto = []
 
@@ -93,34 +96,36 @@ pipeline {
             steps {
                 script {
                     echo 'Início do Processo'
-                    // Carrega o arquivo da biblioteca
+
+                    echo 'Carrega a biblioteca'
                     try {
                         lib = load 'Config/Jenkins/LibraryFile'
                     } catch (Exception e) {
-                        // Erro crítico: mostra na hora e aborta
-                        error "Falha carregando abiblioteca (Config/Jenkins/LibraryFile): ${e.getMessage()}"
+                        // Erro crítico: coloca na console e aborta
+                        echo "Falha carregando a biblioteca (Config/Jenkins/LibraryFile):\n${e.getMessage()}"
+                        error "Falha carregando a biblioteca"
                     }
 
                     // Nome do arquivo de config
                     def confFile = 'Config/Jenkins/ConfigParam.json'
-                    echo "Arquivo JSON de Parâmetros de Configuração: ${confFile}"
+                    echo "Processa arquivo JSON de parâmetros de configuração: ${confFile}"
 
                     // Verifica se o arquivo JSON existe, se está válido e com dados
                     try {
                         jsonConf = lib.parseJSON(confFile, 'dos parâmetros de configuração')
 
-                    } catch (hudson.AbortException e) {
-                        throw e
+                    //} catch (hudson.AbortException e) {
+                    //    throw e
                     } catch (Exception e) {
                         //echo "Erro: ${e.getMessage()}"
-                        echo lib.status('E', "Arquivo JSON de configuração não pode ser carregado: ${e.getMessage()}")
+                        echo lib.status('E', "Arquivo JSON de configuração não pode ser carregado:\n${e.getMessage()}")
                         error lib.status('E', 'Falha lendo/parseando arquivos JSON de configuração')
                     }
 
                     // Inicializa a variável que determina a criação do log da biblioteca
                     lib.log.create = jsonConf.createLog
 
-                    // Cria o arquivo de log
+                    echo 'Cria arquivo de log'
                     try {
                         lib.createLog(
                             action     : 'revert',
@@ -132,8 +137,12 @@ pipeline {
                         )
                     } catch (Exception e) {
                         //echo "Erro: ${e.getMessage()}"
-                        echo lib.status('A', "Arquivo de log não pode ser criado: ${e.getMessage()}")
+                        echo lib.status('A', "Arquivo de log não pode ser criado:\n${e.getMessage()}")
+                        lib.log.create = false
                     }
+
+                    // Variável para armazenar o diretório raiz do repositório
+                    diretorioRaiz = jsonConf.rootDirectories.revert
 
                     // Inicializa o nome dos scripts das ações
                     acao.matarSessoes.script      = jsonConf.scripts.killSessions
@@ -150,6 +159,7 @@ pipeline {
             steps {
                 script {
                     echo lib.line('Início da Carga dos Arquivos JSON de Configuração e Planejamento')
+
                     // Nome dos arquivos
                     def dataFile = 'Config/Jenkins/DatabaseParam.json'
                     def planFile = "Config/Plannings/Planning_Revert.json"
@@ -159,7 +169,6 @@ pipeline {
                         lib.text("Banco de Dados: ${dataFile}"),
                         lib.text("Planejamento do Revert: ${planFile}")
                     ]
-                    //echo texto.join('\n')
                     echo lib.writeText(texto)
 
                     // Verifica se os arquivos JSON existem, se estão válidos e com dados
@@ -167,11 +176,11 @@ pipeline {
                         jsonData = lib.parseJSON(dataFile, 'do banco de dados')
                         jsonPlan = lib.parseJSON(planFile, 'do planejamento para o revert')
 
-                    } catch (hudson.AbortException e) {
-                        throw e
+                    //} catch (hudson.AbortException e) {
+                    //    throw e
                     } catch (Exception e) {
                         //echo "Erro: ${e.getMessage()}"
-                        echo lib.status('E', "Não foi possível ler/parsear os arquivos JSON: ${e.getMessage()}")
+                        echo lib.status('E', "Não foi possível ler/parsear os arquivos JSON:\n${e.getMessage()}")
                         error 'Falha lendo/parseando arquivos JSON'
                     }
                     echo lib.line('Final da Carga dos Arquivos JSON de Configuração e Planejamento')
@@ -188,25 +197,33 @@ pipeline {
                     def dbConfig
                     def usuario
 
+                    // Valida a Tag selecionada com a Tag do planejamento
+                    if (jsonPlan.tag != Tag) {
+                        error lib.status('E', "Tag do planejamento ${jsonPlan.tag} é diferente da tag parametrizada ${Tag}")
+                    }
+
                     if (Database == 'homolog') {
                         nomeDB = 'Homologação'
                     } else if (Database == 'prod') {
                         nomeDB = 'Produção'
                     }
 
+                    // Descrição do build
+                    usuario = jsonPlan.autor.trim().split()[0] // Primeiro nome do analista
+                    currentBuild.description = "Tag: ${Tag} | Usr: ${usuario} | DB: ${nomeDB}"
+
                     texto = [
+                        lib.text('Parâmetros de Execução do Build'),
+                        lib.text("Tag: ${Tag}"),
+                        lib.text("Database: ${nomeDB}"),
+                        lib.text(''),
                         lib.text('Dados do Build'),
                         lib.text("Username: ${lib.getBuildStarter()}"),
                         lib.text("Job Name: ${env.JOB_NAME}"),
                         lib.text("Build #: ${env.BUILD_NUMBER}"),
-                        lib.text("Workspace: ${env.WORKSPACE}"),
-                        lib.text(''),
-                        lib.text('Parâmetros do Build'),
-                        lib.text("Tag: ${Tag}"),
-                        lib.text("Database: ${nomeDB}")
+                        lib.text("Workspace: ${env.WORKSPACE}")
                     ]
-                    //echo texto.join('\n')
-                    echo lib.writeText(text)
+                    echo lib.writeText(texto)
 
                     // Dados do database
                     database.descricao   = jsonData[Database].descricao
@@ -216,22 +233,16 @@ pipeline {
 
                     database.conexao = "$DB_CONN_USR/$DB_CONN_PSW@${database.enderecoIP}:${database.porta}/${database.serviceName}"
 
-                    // Valida a Tag selecionada com a Tag do planejamento
-                    if (jsonPlan.tag != Tag) {
-                        //echo lib.status('E', "Tag do planejamento ${jsonPlan.tag} é diferente da tag parametrizada ${Tag}")
-                        //error "Tag do planejamento ${jsonPlan.tag} é diferente da tag parametrizada ${Tag}"
-                        error lib.status('E', "Tag do planejamento ${jsonPlan.tag} é diferente da tag parametrizada ${Tag}")
-                    }
-
                     // Mensagem de alerta para database de produção
                     if (Database == 'prod') {
                         texto = [
+                            lib.text(''),
                             lib.text('------------------------------'),
                             lib.text('          ATENÇÃO             '),
                             lib.text('Revert no database de produção'),
-                            lib.text('------------------------------')
+                            lib.text('------------------------------'),
+                            lib.text('')
                         ]
-                        //echo texto.join('\n')
                         echo lib.writeText(texto)
                     }
 
@@ -248,13 +259,11 @@ pipeline {
                         lib.text("Descrição: ${jsonPlan.descricao}"),
                         lib.text("Tag: ${jsonPlan.tag}"),
                         lib.text(''),
-
-                        lib.text('Ações'),
+                        lib.text('Ações Planejadas'),
                         lib.text("Matar sessões: ${jsonPlan.acoes.matarSessoes ? 'SIM' : 'NÃO'}"),
                         lib.text("Listar inválidos: ${jsonPlan.acoes.listarInvalidos ? 'SIM' : 'NÃO'}"),
                         lib.text("Recompilar objetos: ${jsonPlan.acoes.recompilarObjetos ? 'SIM' : 'NÃO'}"),
                         lib.text(''),
-
                         lib.text('Database'),
                         lib.text("Destino: ${database.descricao}"),
                         lib.text("Endereço IP: ${database.enderecoIP}"),
@@ -262,14 +271,13 @@ pipeline {
                         lib.text("Service name: ${database.serviceName}"),
                         lib.text('')
                     ]
-                    //echo texto.join('\n')
                     echo lib.writeText(texto)
 
                     // Verifica ações ativas
                     if (!jsonPlan.acoes.matarSessoes &&
                         !jsonPlan.acoes.listarInvalidos &&
                         !jsonPlan.acoes.recompilarObjetos) {
-                        echo 'Nenhuma ação adicional planejada'
+                        echo lib.status('A', 'Nenhuma ação adicional planejada')
                     }
                     echo lib.line('Final do Processamento dos Parâmetros do Planejamento Para Revert')
                 } // script
@@ -281,18 +289,17 @@ pipeline {
             steps {
                 script {
                     echo lib.line('Início da Validação dos Objetos Planejados Para Revert')
-                    def diretorioRaiz = 'Revert'
                     def comando
                     def retorno
 
                     jsonPlan.objetos.each { obj ->
-                        // Verifica a existência do arquivo
+                        lib.line("Verifica a existência do arquivo: ${diretorioRaiz}/${obj.nome}")
                         if (!fileExists(file: "${diretorioRaiz}/${obj.nome}")) {
                             error lib.status('E', "Arquivo ${diretorioRaiz}/${obj.nome} programado para deploy não encontrado")
                         }
                         echo lib.line("Arquivo: ${diretorioRaiz}/${obj.nome}")
 
-                        // Verifica encoding do arquivo
+                        lib.line('Verifica encoding do arquivo')
                         //comando = "uchardet ${diretorioRaiz}/${obj.nome}"
                         //retorno = sh(script: comando, returnStdout: true).trim().toUpperCase()
 
@@ -304,7 +311,7 @@ pipeline {
                             echo lib.status('S', "Encoding válido: ${retorno}")
                         } else {
                             echo lib.status('E', "Encoding inválido: ${retorno}")
-                            error lib.status('E', "Arquivo ${diretorioRaiz}/${obj.nome} programado para revert não está em UTF-8")
+                            error lib.status('E', "Arquivo ${diretorioRaiz}/${obj.nome} programado para revert não está em US-ASCII UTF-8")
                         }
                     }
                     echo lib.line('Final da Validação dos Tipos de Arquivos Planejados Para Revert')
@@ -320,7 +327,7 @@ pipeline {
                         echo lib.status('A', 'Matar as sessões do banco de dados antes do revert está inativa no planejamento - nenhuma ação foi executada')
                         return
                     }
-                    echo lib.line('Mata as Sessões do Banco de Dados Antes do Revert')
+                    echo lib.status('A', 'Mata as Sessões do Banco de Dados Antes do Revert')
                     def script = acao.matarSessoes.script
                     def retorno
 
@@ -331,7 +338,7 @@ pipeline {
                     }
 
                     retorno = lib.runScript(script, database.conexao)
-                    echo lib.line("Retorno da execução: ${retorno}")
+                    echo lib.line("Retorno da execução:\n${retorno}")
 
                     if (retorno.toUpperCase().contains('ERROR')) {
                         error lib.status('E', 'Script que mata as sessões do banco de dados antes do deploy está com erro')
@@ -349,20 +356,20 @@ pipeline {
             steps {
                 script {
                     echo lib.line("Início do Revert dos Objetos Planejados no Banco ${database.descricao}")
-                    def diretorioRaiz = 'Revert'
-                    def comando
+                    def tipoObjeto
                     def retorno
 
                     jsonPlan.objetos.each { obj ->
+                        tipoObjeto = obj.nome.split('/')[0][0..-2].toLowerCase()
+
                         texto = [
                             lib.text("Arquivo: ${diretorioRaiz}/${obj.nome}"),
                             lib.text("Descrição: ${obj.descricao}")
                         ]
-                        //echo texto.join('\n')
                         echo lib.writeText(texto)
 
-                        retorno = lib.runScript("${diretorioRaiz}/${obj.nome}", database.conexao)
-                        echo lib.line("Retorno da execução: ${retorno}")
+                        retorno = lib.runScript("${diretorioRaiz}/${obj.nome}", database.conexao, tipoObjeto)
+                        echo lib.line("Retorno da execução:\n${retorno}")
 
                         retorno = retorno.toUpperCase()
                         switch (true) {
@@ -379,6 +386,7 @@ pipeline {
                                 break
                             default:
                                 echo lib.status('S', 'Processo concluído')
+                                break
                         }
                     }
                     echo lib.line("Final do Revert dos Objetos Planejados no Banco ${database.descricao}")
@@ -395,7 +403,7 @@ pipeline {
                         return
                     }
                     echo lib.line('Lista Objetos Inválidos Após o Revert')
-                    def script = 'Config/Scripts/CompileObjects.sql'
+                    def script = acao.listarInvalidos.script
                     def retorno
 
                     echo lib.line("Verificando script: ${script}")
@@ -405,7 +413,7 @@ pipeline {
                     }
 
                     retorno = lib.runScript(script, database.conexao)
-                    echo lib.line("Retorno da execução: ${retorno}")
+                    echo lib.line("Retorno da execução:\n${retorno}")
 
                     if (retorno.toUpperCase().contains('ERROR')) {
                         error lib.status('E', 'Script que lista objetos inválidos após o revert está com erro')
@@ -427,7 +435,7 @@ pipeline {
                         return
                     }
                     echo lib.line('Recompila Objetos Após o Revert')
-                    def script = 'Config/Scripts/CompileObjects.sql'
+                    def script = acao.recompilarObjetos.script
                     def retorno
 
                     echo lib.line("Verificando script: ${script}")
@@ -437,7 +445,7 @@ pipeline {
                     }
 
                     retorno = lib.runScript(script, database.conexao)
-                    echo lib.line("Retorno da execução: ${retorno}")
+                    echo lib.line("Retorno da execução:\n${retorno}")
 
                     if (retorno.toUpperCase().contains('ERROR')) {
                         error lib.status('E', 'Script que recompila objetos após o revert está com erro')
