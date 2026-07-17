@@ -1,0 +1,413 @@
+import groovy.transform.Field
+
+
+/*--------------------------------------------------
+    Variável do log
+--------------------------------------------------*/
+@Field
+def log = [
+    create: true, // Indica a criação do arquivo
+    name  : null, // Nome do arquivo
+    handle: null, // Handle do arquivo
+    text  : [],   // Bloco para agrupar um texto para entrada única
+    buffer: []    // Buffer que acumula as linhas que serão descarregadas no arquivo
+]
+
+
+/*--------------------------------------------------
+    Processamento dos JSONs
+--------------------------------------------------*/
+def parseJSON(String jsonFile, String description) {
+    def text = [
+        "Arquivo JSON ${description}"
+    ]
+    if (fileExists(file: jsonFile)) {
+        text << 'Arquivo encontrado'
+        def jsonParsed = readJSON file: jsonFile
+        if (jsonParsed) {
+            text << 'Arquivo parseado'
+            echo text.join('\n')
+            return jsonParsed
+        } else {
+            text << 'Arquivo inválido ou vazio!'
+            echo text.join('\n')
+            error "Arquivo JSON ${description} inválido ou vazio"
+        }
+    } else {
+        text << 'Arquivo não encontrado'
+        echo text.join('\n')
+        error "Arquivo JSON ${description} não encontrado"
+    }
+}
+
+
+/*--------------------------------------------------
+    Execução de script no SQL*Plus
+--------------------------------------------------*/
+def runScript(String script, String connection, String objectType = '') {
+    // Lista dos objetos que terão o show errors
+    def objetosDetalhar = [
+        'function',
+        'package',
+        'procedure',
+        'trigger'
+    ]
+    def comando
+    def input
+
+    if (!objectType) {
+        comando = 'export LD_LIBRARY_PATH=/opt/oracle/instantclient_21_10\n' +
+                  'export PATH=$LD_LIBRARY_PATH:$PATH\n' +
+                  'export NLS_LANG=AMERICAN_AMERICA.WE8ISO8859P1\n' +
+                  """echo "@${script}" | sqlplus "${connection}";\n"""
+    } else {
+        // Se o tipo do objeto estiver na lista, depois do script roda o show errors
+        if (objectType in objetosDetalhar) {
+            input = '(echo "@' + script + '"; echo "show errors")'
+        } else {
+            input = 'echo "@' + script + '"'
+        }
+        comando = 'export LD_LIBRARY_PATH=/opt/oracle/instantclient_21_10\n' +
+                  'export PATH=$LD_LIBRARY_PATH:$PATH\n' +
+                  'export NLS_LANG=AMERICAN_AMERICA.WE8ISO8859P1\n' +
+                  """${input} | sqlplus "${connection}";\n"""
+    }
+
+    try {
+        def retorno = sh(script: comando, returnStdout: true)
+    } catch (Exception e) {
+        // Erro crítico na execução do comando: coloca na console e aborta
+        echo status('E', "Falha rodando script no SQL*Plus:\n${e.getMessage()}")
+        error status('E', "Falha carregando a biblioteca")
+    }
+    
+    return retorno
+}
+
+
+/*--------------------------------------------------
+    Inclui a linha da console no log
+--------------------------------------------------*/
+def line(String line) {
+    if (!line) {
+        return
+    }
+    addLogLine(line)
+    return line
+}
+
+
+/*--------------------------------------------------
+    Inclui a linha do texto (grupo) da console no log
+--------------------------------------------------*/
+def text(String line) {
+    if (!line) {
+        return ''
+    }
+    addLogTextLine(line)
+    return line
+}
+
+
+/*--------------------------------------------------
+    Adiciona o texto escrito na console no buffer do log
+--------------------------------------------------*/
+def writeText(List text) {
+    if (!text) {
+        return
+    }
+    flushLogText()
+    return text.join('\n')
+}
+
+
+/*--------------------------------------------------
+    Inclui o texto escrito na console com o identificador do status no buffer do log
+--------------------------------------------------*/
+def status(String status, String line) {
+    /* Parâmetros:
+        status -> 'S' para 'SUCESSO' / 'A' para 'ALERTA' / 'E' para 'ERRO'
+        line   -> Texto da linha a ser colocado na console
+    */
+    if (!line) {
+        return
+    }
+    def message
+
+    switch (status.toUpperCase()[0]) {
+        case 'S':
+            message = "[SUCESSO]: ${line}"
+            break
+        case 'A':
+            message = "[ALERTA]: ${line}"
+            break
+        case 'E':
+            message = "[ERRO]: ${line}"
+            break
+        default:
+            message = line
+            break
+    }
+
+    addLogLine(message)
+    return message
+}
+
+
+/*--------------------------------------------------
+    Starter do build
+--------------------------------------------------*/
+def getBuildStarter() {
+    def causes = currentBuild.rawBuild.getCauses()
+    def result = []
+
+    for (c in causes) {
+        switch (true) {
+            case c instanceof hudson.model.Cause$UserIdCause:
+                result << c.getUserName()
+                break
+            case c instanceof hudson.triggers.TimerTrigger$TimerTriggerCause:
+                result << 'Agendado (cron)'
+                break
+            case c instanceof hudson.triggers.SCMTrigger$SCMTriggerCause:
+                result << 'SCM (commit/polling)'
+                break
+            case c instanceof hudson.model.Cause$UpstreamCause:
+                result << "Upstream job: ${c.getUpstreamProject()} #${c.getUpstreamBuild()}"
+                break
+            case c instanceof org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper:
+                return 'Outro job'
+                break
+            default:
+                result << c.toString()
+                break
+        }
+    }
+    return (result.unique()).join('  |  ')
+}
+
+
+/*--------------------------------------------------
+    Criação e inicializa o arquivo de log da execução
+--------------------------------------------------*/
+
+
+
+
+
+
+
+
+//@NonCPS
+//def createLog(String action, String tag, String buildNumber, String username, String jobName, String workspace) {
+/*def createLog(Map args) {
+    // Verifica se deve criar o log
+    if (!log.create) {
+        return
+    }
+    
+    // Extrai os parâmetros nomeados do Map.
+    //def action      = args.action ?: 'deploy' // Para definir um valor padrão
+    def action      = args.action
+    def tag         = args.tag
+    def buildNumber = args.buildNumber
+    def username    = args.username
+    def jobName     = args.jobName
+    def workspace   = args.workspace
+
+    def timestamp = new Date().format('yyyyMMdd_HHmmss')
+
+    log.name = "log/${action}__${tag}__${timestamp}__${buildNumber}.log"
+    log.handle = new File(log.name) // Inicializa o handle
+    def path = log.handle.getParentFile()
+
+    // Cria diretório se não existir
+    if (!path.isDirectory()) {
+        path.mkdirs()
+    }
+
+    // Prepara o cabeçalho
+    log.text = [
+        '------------------------------',
+        "Username : ${username}",
+        "Job Name : ${jobName}",
+        "Tag      : ${tag}",
+        "Build #  : ${buildNumber}",
+        "WorkSpace: ${workspace}",
+        "Data     : ${timestamp}",
+        '------------------------------',
+        '',
+        ''
+    ]
+
+    // Cria o arquivo e grava o cabeçalho
+    log.handle.withWriter('UTF-8') { writer -> // Cria o arquivo
+        writer.writeLine(log.text.join('\n'))  // Adiciona o cabeçalho
+    }
+
+    // Limpa a variável de bloco após a escrita
+    log.text.clear()
+}
+*/
+/*def createLog(String action, String tag, String buildNumber, String username, String jobName, String workspace) {
+    // Verifica se deve criar o log
+    if (!log.create) {
+        return
+    }
+
+    def timestamp = new Date().format('yyyyMMdd_HHmmss')
+
+    // Cria o diretório para o log
+    sh 'mkdir -p log'
+
+    log.name = "log/${action}__${tag}__${timestamp}__${buildNumber}.log"
+
+    // Prepara o cabeçalho
+    log.text = [
+        '------------------------------',
+        "Username : ${username}",
+        "Job Name : ${jobName}",
+        "Tag      : ${tag}",
+        "Build #  : ${buildNumber}",
+        "WorkSpace: ${workspace}",
+        "Data     : ${timestamp}",
+        '------------------------------',
+        '',
+        ''
+    ]
+
+    // Cria o arquivo e grava o cabeçalho
+    writeFile file: log.name, text: log.text.join('\n'), encoding: 'UTF-8'
+
+    // Limpa a variável de bloco após a escrita
+    log.text.clear()
+}
+*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*--------------------------------------------------
+    Adição de uma linha única ao buffer do log
+--------------------------------------------------*/
+def addLogLine(String line) {
+    if (!log.create ||
+        !log.handle ||
+        !line) {
+        return
+    }
+
+    // Adiciona a linha ao buffer
+    def now = new Date().format('HH:mm:ss')
+    log.buffer << "[${now}] ${line}"
+}
+
+
+/*--------------------------------------------------
+    Inclusão de uma linha ao bloco de texto do log
+--------------------------------------------------*/
+def addLogTextLine(String line) {
+    if (!log.create ||
+        !log.handle ||
+        !line) {
+        return
+    }
+
+    // Adiciona a linha ao bloco de texto
+    log.text << "    ${line}"
+}
+
+
+/*--------------------------------------------------
+    Flush do bloco de texto ao buffer do log
+--------------------------------------------------*/
+def flushLogText() {
+    if (!log.create ||
+        !log.handle) {
+        return
+    }
+
+    // Adiciona o bloco de texto ao buffer
+    def now = new Date().format('HH:mm:ss')
+    log.buffer << "[${now}]"
+    log.text.each { line ->
+        log.buffer << line
+    }
+
+    // Limpa o buffer após adicionar
+    log.text.clear()
+}
+
+
+/*--------------------------------------------------
+    Grava o conteúdo do buffer no arquivo de log e limpa o buffer
+--------------------------------------------------*/
+@NonCPS
+def flushLog() {
+    if (!log.create ||
+        !log.handle ||
+        !log.buffer) {
+        return
+    }
+
+    // Descarrega o buffer
+    log.handle.withWriterAppend('UTF-8') { writer -> // adiciona no arquivo
+        writer.writeLine(log.buffer.join('\n'))
+    }
+
+    // Limpa o buffer após flush
+    log.buffer.clear()
+}
+
+
+/*--------------------------------------------------
+    Encerramento do arquivo de log
+--------------------------------------------------*/
+@NonCPS
+def finishLog(Map args) {
+    if (!log.create ||
+        !log.handle) {
+        return
+    }
+
+    // Extrai os parâmetros nomeados do Map.
+    //def action      = args.action ?: 'deploy' // Para definir um valor padrão
+    def action      = args.action
+    def tag         = args.tag
+    def buildNumber = args.buildNumber
+
+    def timestamp = new Date().format('yyyyMMdd_HHmmss')
+
+    // Prepara a finalização
+    log.text = [
+        '',
+        '',
+        '------------------------------',
+        "${action} Terminado",
+        "Tag    : ${tag}",
+        "Build #: ${buildNumber}",
+        "Data   : ${timestamp}",
+        '------------------------------'
+    ]
+
+    // Descarrega o texto
+    log.handle.withWriterAppend('UTF-8') { writer ->  // Acessa o arquivo
+        writer.writeLine(log.text.join('\n')) // Adiciona a finalização
+    }
+
+    // Limpa o texto após a finalização
+    log.text.clear()
+}
+
+
+return this
