@@ -197,9 +197,7 @@ def createLog(Map args) {
     if (!log.create) {
         return
     }
-
-    echo 'Antes das variáveis na criação'
-
+    
     // Extrai os parâmetros nomeados do Map.
     //def action      = args.action ?: 'deploy' // Para definir um valor padrão
     def action      = args.action
@@ -208,9 +206,6 @@ def createLog(Map args) {
     def username    = args.username
     def jobName     = args.jobName
     def workspace   = args.workspace
-
-    echo 'depois das variáveis'
-
 
     def timestamp = new Date().format('yyyyMMdd_HHmmss')
 
@@ -222,10 +217,6 @@ def createLog(Map args) {
     if (!path.isDirectory()) {
         path.mkdirs()
     }
-
-
-    echo 'preparando o cabeçlho do log'
-
 
     // Prepara o cabeçalho
     log.text = [
