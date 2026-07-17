@@ -1,0 +1,13 @@
+{
+    "createLog": true,
+    "consistRevert": true,
+    "rootDirectories": {
+        "deploy": "Deploy",
+        "revert": "Revert"
+    },
+    "scripts": {
+        "killSessions": "Config/Scripts/KillSessions.sql",
+        "listInvalids": "Config/Scripts/ListInvalids.sql",
+        "compileObjects": "Config/Scripts/CompileObjects.sql"
+    }
+}
