@@ -1,13 +1,38 @@
 {
-    "createLog": true,
-    "consistRevert": true,
-    "rootDirectories": {
-        "deploy": "Deploy",
-        "revert": "Revert"
+    "databases": {
+        "prod": {
+            "descricao": "Produção",
+            "exigeBranch": false,
+            "exigeTag": true
+        },
+        "homolog": {
+            "descricao": "Homologação",
+            "exigeBranch": false,
+            "exigeTag": true
+        },
+        "desenv": {
+            "descricao": "Desenvolvimento",
+            "exigeBranch": true,
+            "exigeTag": false
+        },
+        "forms12c": {
+            "descricao": "Forms 12c",
+            "exigeBranch": true,
+            "exigeTag": false
+        }
     },
     "scripts": {
-        "killSessions": "Config/Scripts/KillSessions.sql",
-        "listInvalids": "Config/Scripts/ListInvalids.sql",
-        "compileObjects": "Config/Scripts/CompileObjects.sql"
+        "killSessions": {
+            "nome": "KillSessions.sql",
+            "diretorio": "Config/Scripts"
+        },
+        "listInvalids": {
+            "nome": "ListInvalids.sql",
+            "diretorio": "Config/Scripts"
+        },
+        "compileObjects": {
+            "nome": "CompileObjects.sql",
+            "diretorio": "Config/Scripts"
+        }
     }
 }
