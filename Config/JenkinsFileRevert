@@ -1,0 +1,673 @@
+//import groovy.sql.Sql
+//import java.sql.Driver
+//import java.sql.DriverManager
+import java.util.ServiceLoader
+
+// Variáveis que indicam a seleção da branch e da tag
+def selectBranch = false
+def selectTag    = false
+
+// Variável para o arquivo da biblioteca
+def lib
+
+// Variável de controle para o parâmetro de Dry-Run
+def modo_Dry_Run = false
+
+// Variáveis para os objetos JSON
+def jsonConf // Config do ambiente
+def jsonData // Informações dos bancos de dados
+def jsonObjs // Informações dos objetos
+def jsonPlan // Planejamento do revert
+
+// Variável para os dados do database
+def database = [
+    descricao  : '',
+    enderecoIP : '',
+    porta      : '',
+    serviceName: '',
+    conexao    : ''
+]
+
+// Variável com as ações configuradas no planejamento
+def acao = [
+    matarSessoes     : false,
+    listarInvalidos  : false,
+    recompilarObjetos: false
+]
+
+// Variável para display único em várias linhas
+def disp = []
+
+// Variável para mensagens
+def msg = ''
+
+
+pipeline {
+    agent any
+    environment {
+        // Credencial de conexão com o banco de dados
+        DB_CONN = credentials('DevOps_DB')
+        //DB_CONN = credentials('TiagoG_DB')
+    }
+
+    options {
+        // Altera o funcionamento default e não faz o checkout do SCM no início do job
+        skipDefaultCheckout(true)
+
+        // Mensagens coloridas na console do build
+        ansiColor('xterm')
+    }
+
+    stages {
+
+        stage('Limpa Workspace') {
+            steps {
+                script {
+                    echo 'Limpando Workspace antes do checkout'
+                    cleanWs() // Limpa resíduos de builds antigos
+                } //Script 
+            } // Steps
+        } // Stage 'Preparação'
+
+
+        stage('Checkout Repositório') {
+            steps {
+                script {
+                    echo 'Realizando Checkout do Repositório'
+                    def origem
+                    //selectBranch = !Branch.startsWith('None')
+                    //selectTag    = !Tag.startsWith('None')
+                    selectBranch = Branch != 'None'
+                    selectTag    = Tag != 'None'
+
+                    // Gerenciamento do checkout do repositório: a prioridade são os Tags
+                    // Verifica se o parâmetro Tag foi selecionado
+                    if (selectTag) {
+                        if (selectBranch) {
+                            error 'Deve ser selecionada apenas uma Tag ou uma Branch para o checkout e revert!'
+                        }
+                        origem = Tag
+                        echo "Realizando checkout da Tag: ${Tag}"
+                    } else {
+                        // Caso contrário (não selecionou uma Tag), faz o checkout da Branch definido
+                        if (selectBranch) {
+                            origem = Branch
+                            echo "Realizando checkout da Branch: ${Branch}"
+                        } else {
+                            error 'É necessário selecionar uma Tag ou uma Branch para o checkout e revert!'
+                        }
+                    }
+                    checkout scm: ([
+                        $class: 'GitSCM',
+                        //branches: [[name: "refs/tags/${Tag}"]],
+                        //branches: [[name: "*/${Branch}"]],
+                        branches: [[name: origem]],
+                        userRemoteConfigs: scm.userRemoteConfigs,
+                        extensions: scm.extensions
+                    ])
+                    echo 'Checkout do Repositório Concluído'
+                } // script
+            } // Steps
+        } // stage 'Checkout Repositório'
+
+
+        stage('Inicia Processo') {
+            steps {
+                script {
+                    echo 'Início do Processo'
+                    // Carrega o arquivo da biblioteca
+                    try {
+                        lib = load 'Config/Jenkins/LibraryFile'
+                    } catch (Exception e) {
+                        // Erro crítico: mostra na hora e aborta
+                        error "Falha carregando arquivo da biblioteca (Config/Jenkins/LibraryFile): ${e.getMessage()}"
+                    }
+
+                    // Cria o arquivo de log
+                    lib.createLog('revert', lib.getBuildStarter(), env.JOB_NAME, env.BUILD_NUMBER, env.WORKSPACE)
+                    echo 'Início do Processo Concluído'
+                } // script
+            } // steps
+        } // stage 'Inicia Processo'
+
+
+        stage('Carrega JSONs') {
+            steps {
+                script {
+                    echo lib.linha('Blu', 'Início da Carga dos Arquivos JSON de Configuração e Planejamento')
+                    def planFile
+
+                    // Nome dos arquivos
+                    def confFile = 'Config/Jenkins/ConfigParam.json'
+                    def dataFile = 'Config/Jenkins/DatabaseParam.json'
+                    def objsFile = 'Config/Jenkins/ObjectsParam.json'
+
+                    // O nome do planejamento depende dos parâmetros do job
+                    if (selectTag) {
+                        planFile = "Config/Planning/Plan_${Tag}_Revert.json"
+                    } else {
+                        if (selectBranch) {
+                            planFile = "Config/Planning/Plan_${Branch.replace("/", "_")}_Revert.json"
+                        }
+                    }
+
+                    disp = [
+                        lib.linha('Blk', 'Arquivos JSON', 'T'),
+                        lib.label('Blk', 'Configuração', confFile, 'T'),
+                        lib.label('Blk', 'Banco de Dados', dataFile, 'T'),
+                        lib.label('Blk', 'Objetos', objsFile, 'T'),
+                        lib.label('Blk', 'Planejamento do Revert', planFile, 'T')
+                    ]
+                    echo lib.texto(disp)
+
+                    // Verifica se os arquivos JSON existem, se estão válidos e com dados
+                    try {
+                        jsonConf = lib.processaJSON(confFile, 'de configuração')
+                        jsonData = lib.processaJSON(dataFile, 'do banco de dados')
+                        jsonObjs = lib.processaJSON(objsFile, 'dos parâmetros de objetos')
+                        jsonPlan = lib.processaJSON(planFile, 'do planejamento para o revert')
+
+                        if (lib.consist.revertFile) {
+                            jsonRevt = lib.processaJSON(revtFile, 'do planejamento para o revert')
+                        }
+                    } catch (hudson.AbortException e) {
+                        throw e
+                    } catch (Exception e) {
+                        msg = 'Falha lendo/parseando arquivos JSON'
+                        echo lib.status('E', msg)
+                        echo lib.linha('Red', "Erro: ${e.getMessage()}")
+                        error msg
+                    }
+                    echo lib.status('S', 'Final da Carga dos Arquivos JSON de Configuração')
+                    lib.flushLog()
+                } // script
+            } // steps
+        } // stage 'Carrega JSONs'
+
+
+        stage('Processa Parâmetros') {
+            steps {
+                script {
+                    echo lib.linha('Blu', 'Início do Processamento dos Parâmetros do Planejamento Para Revert')
+                    def dbConfig
+                    def descricaoBD
+                    def exigeBranch
+                    def exigeTag
+                    def usuario
+                    def origem
+
+                    disp = [
+                        lib.linha('Blu', 'Dados do Build', 'T'),
+                        lib.label('Blu', 'Username', lib.getBuildStarter(), 'T'),
+                        lib.label('Blu', 'Job Name', env.JOB_NAME, 'T'),
+                        lib.label('Blu', 'Build #', env.BUILD_NUMBER, 'T'),
+                        lib.label('Blu', 'Workspace', env.WORKSPACE, 'T')
+                    ]
+                    echo lib.texto(disp)
+
+                    // Consistência da execução
+                    if (jsonPlan.executar != 'Revert') {
+                        msg = "Planejamento para o revert com execução inconsistente: ${jsonPlan.executar}"
+                        echo lib.status('E', msg)
+                        error msg
+                    }
+
+                    // Origem dos scripts - Branch ou Tag
+                    if (jsonPlan.tag == '' && jsonPlan.branch == '') { // Nenhum informado
+                        msg = 'Planejamento para o revert sem branch e tag informadas! Uma das informações deve constar'
+                        echo lib.status('E', msg)
+                        error msg
+                    } else if (jsonPlan.tag != '' && jsonPlan.branch != '') { // Ambos informados
+                        msg = 'Planejamento para o revert com branch e tag informadas! Apenas uma informação deve constar'
+                        echo lib.status('E', msg)
+                        error msg
+                    }
+
+                    // Consistência do banco de dados
+                    dbConfig = jsonConf.databases[Database]
+                    if (dbConfig) {
+                        descricaoBD = dbConfig.descricao
+                        exigeBranch = dbConfig.exigeBranch
+                        exigeTag    = dbConfig.exigeTag
+                    } else { // Database não previsto
+                        msg = "Banco de dados ${Database} não previsto para revert"
+                        echo lib.status('E', msg)
+                        error msg
+                    }
+
+                    if (jsonPlan.tag != '') {
+                        if (jsonPlan.tag == Tag) {
+                            echo lib.status('S', 'Tag selecionada encontrada no planejamento do revert')
+
+                            // Descrição do build
+                            usuario = jsonPlan.autor.trim().split()[0] // Primeiro nome do analista
+                            currentBuild.description = "Tag: ${Tag} | Usr: ${usuario} | DB: ${descricaoBD}"
+
+                            origem = lib.label('Blk', 'Tag', jsonPlan.tag, 'T')
+                        } else { // Tag não encontrada no planejamento
+                            msg = "Planejamento para o revert com tag inconsistente! Informada: ${jsonPlan.tag} e selecionada: ${Tag}"
+                            echo lib.status('E', msg)
+                            error msg
+                        }
+                    }
+
+                    if (jsonPlan.branch != '') {
+                        if (jsonPlan.branch == Branch) {
+                            echo lib.status('S', 'Branch selecionada encontrada no planejamento do revert')
+
+                            // Descrição do build
+                            usuario = jsonPlan.autor.trim().split()[0] // Primeiro nome do analista
+                            currentBuild.description = "Branch: ${Branch} | Usr: ${usuario} | DB: ${descricaoBD}"
+
+                            origem = lib.label('Blk', 'Branch', jsonPlan.branch, 'T')
+                        } else { // Branch não encontrada no planejamento
+                            msg = "Planejamento para o revert com branch inconsistente! Informada: ${jsonPlan.branch} e selecionada: ${Branch}"
+                            echo lib.status('E', msg)
+                            error msg
+                        }
+                    }
+
+                    // Modo dry-run
+                    modo_Dry_Run = jsonPlan.modo_Dry_Run
+                    if (modo_Dry_Run) {
+                        echo lib.status('A', 'Revert rodando em modo Dry-Run! Nenhuma alteração será feita no banco de dados!')
+                    }
+
+                    // Parâmetros exigidos pelo banco de dados
+                    if (exigeBranch) {
+                        if (selectBranch) {
+                            if (!lib.consisteNome(Branch, 'branch')) {
+                                msg = "Padrão de nomenclatura inválido na branch: ${Branch}. O formato é categoria/prefixo-numero."
+                                echo lib.status('E', msg)
+                                error msg
+                            }
+                        } else {
+                            msg = "Para o revert no banco de dados ${descricaoBD} é necessário selecionar a branch."
+                            echo lib.status('E', msg)
+                            error msg
+                        }
+                    }
+
+                    if (exigeTag) {
+                        if (selectTag) {
+                            if (!lib.consisteNome(Tag, 'tag')) {
+                                msg = "Padrão de nomenclatura inválido na tag: ${Tag}. O formato é vAAAA.MM.DD.SQ"
+                                echo lib.status('E', msg)
+                                error msg
+                            }
+                        } else {
+                            msg = "Para o revert no banco de dados ${descricao} é necessário selecionar a tag."
+                            echo lib.status('E', msg)
+                            error msg
+                        }
+                    }
+
+                    // Dados do database
+                    database.descricao   = jsonData[Database].descricao
+                    database.enderecoIP  = jsonData[Database].enderecoIP
+                    database.porta       = jsonData[Database].porta
+                    database.serviceName = jsonData[Database].serviceName
+
+                    database.conexao = "$DB_CONN_USR/$DB_CONN_PSW@${database.enderecoIP}:${database.porta}/${database.serviceName}"
+
+                    // Mensagem de alerta para database de produção
+                    if (Database == 'prod') {
+                        disp = [
+                            lib.linha('Red', '---------------------------------------------', 'T'),
+                            lib.linha('Red', '                  ATENÇÃO                    ', 'T'),
+                            lib.linha('Red', "Database de produção selecionado para depploy", 'T'),
+                            lib.linha('Red', '---------------------------------------------', 'T')
+                        ]
+                        echo lib.texto(disp)
+                    }
+
+                    // Ações planejadas
+                    acao.matarSessoes      = jsonPlan.acoes.matarSessoes
+                    acao.listarInvalidos   = jsonPlan.acoes.listarInvalidos
+                    acao.recompilarObjetos = jsonPlan.acoes.recompilarObjetos
+
+                    disp = [
+                        '',
+                        lib.linha('Blk', 'Informações do Planejamento', 'T'),
+                        origem, //lib.label('Blk', 'Tag', jsonPlan.tag, 'T'),
+                        lib.label('Blk', 'Descrição', jsonPlan.descricao, 'T'),
+                        lib.label('Blk', 'Autor', jsonPlan.autor, 'T'),
+                        lib.label('Blk', 'Data', jsonPlan.data, 'T'),
+                        lib.linha('Blk', ' ', 'T'),
+
+                        lib.linha('Blk', 'Ações', 'T'),
+                        lib.label('Red', 'Matar sessões', jsonPlan.acoes.matarSessoes ? 'SIM_RED' : 'NAO_GRN', 'T'),
+                        lib.label('Blk', 'Listar inválidos', jsonPlan.acoes.listarInvalidos ? 'SIM_GRN' : 'NAO_RED', 'T'),
+                        lib.label('Blk', 'Recompilar objetos', jsonPlan.acoes.recompilarObjetos ? 'SIM_GRN' : 'NAO_RED', 'T'),
+                        lib.linha('Blk', ' ', 'T'),
+
+                        lib.linha('Blk', 'Database', 'T'),
+                        lib.label('Blk', 'Destino', database.descricao, 'T'),
+                        lib.label('Blk', 'Endereço IP', database.enderecoIP, 'T'),
+                        lib.label('Blk', 'Porta', database.porta, 'T'),
+                        lib.label('Blk', 'Service name', database.serviceName, 'T'),
+                        ''
+                    ]
+                    echo lib.texto(disp)
+
+                    // Verifica ações ativas
+                    if (!jsonPlan.acoes.matarSessoes &&
+                        !jsonPlan.acoes.listarInvalidos &&
+                        !jsonPlan.acoes.recompilarObjetos) {
+                        echo lib.status('A', 'Nenhuma ação adicional planejada')
+                    }
+                    echo lib.status('S', 'Final do Processamento dos Parâmetros do Planejamento Para Revert')
+                    lib.flushLog()
+                } // script
+            } // steps
+        } // stage 'Processa Parâmetros'
+
+
+        stage('Valida Objetos') {
+            steps {
+                script {
+                    echo lib.linha('Blu', 'Início da Validação dos Objetos Planejados Para Revert')
+                    def diretorioRaiz
+                    def diretorioObj
+                    def objeto
+                    def script
+                    def comando
+                    def retorno
+
+                    diretorioRaiz = jsonObjs.diretorioRaiz.revert
+                    jsonPlan.tarefas.each { tar ->
+                        objeto = jsonObjs.objetos.find { obj ->
+                            obj.tipo == tar.tipo.capitalize()
+                        }
+                        if (objeto) {
+                            diretorioObj = "${diretorioRaiz}/${objeto.diretorio}"
+                        } else {
+                            msg = "Tipo de objeto planejado para revert não encontrado na configuração de objetos: ${tar.tipo.capitalize()}"
+                            echo lib.status('E', msg)
+                            error msg
+                        }
+
+                        tar.objetos.each { obj ->
+                            script = "${diretorioObj}/${obj.nome}"
+                            // Verifica a existência do arquivo
+                            if (!fileExists(file: script)) {
+                                echo lib.status('E', "Arquivo ${script} programado para revert não encontrado")
+                                error "Arquivo ${script} programado para revert não encontrado"
+                            }
+
+                            echo lib.label('Grn', 'Arquivo', script)
+
+                            // Verifica encoding do arquivo
+                            /* O comando uchardet está retornando o erro: command not found
+                            comando = "uchardet ${script}"
+                            retorno = sh(script: comando, returnStdout: true).trim().toUpperCase()*/
+
+                            comando = "file -bi ${script} | awk -F'charset=' '{print \$2}'"
+                            retorno = sh(script: comando, returnStdout: true).trim().toUpperCase()
+
+                            // ASCII é um subset do UTF-8 e apenas indica um arquivo sem acentos ou caracteres especias
+                            if (retorno in ['US-ASCII', 'UTF-8']) {
+                                echo lib.label('Grn', 'Encoding válido', retorno)
+                            } else {
+                                echo lib.label('Red', 'Encoding inválido', retorno)
+                                echo lib.status('E', "Arquivo ${script} programado para revert não está em UTF-8")
+                                error "Arquivo ${script} programado para revert não está em UTF-8"
+                            }
+                        }
+                    }
+                    echo lib.status('S', 'Final da Validação dos Tipos de Arquivos Planejados Para Revert')
+                    lib.flushLog()
+                } // script
+            } // steps
+        } // stage 'Valida Objetos'
+
+
+        stage('Mata Sessões') {
+            steps {
+                script {
+                    if (!acao.matarSessoes) {
+                        echo lib.linha('Blu', 'Matar as sessões do banco de dados antes do revert está inativa no planejamento - nenhuma ação foi executada')
+                        return
+                    }
+                    echo lib.linha('Red', 'Mata as Sessões do Banco de Dados Antes do Revert')
+                    def script
+                    def diretorio
+                    def retorno
+
+                    // Modo dry-run
+                    if (modo_Dry_Run) {
+                        echo lib.status('A', 'Revert rodando em modo Dry-Run! Nenhuma alteração será feita no banco de dados!')
+                    }
+
+                    echo lib.linha('Blk', 'Verificando script')
+
+                    script = jsonConf.scripts.killSessions.nome
+                    diretorio = jsonConf.scripts.killSessions.diretorio
+
+                    disp = [
+                        lib.label('Blk', 'Script', script, 'T'),
+                        lib.label('Blk', 'Diretório', diretorio, 'T')
+                    ]
+                    echo lib.texto(disp)
+
+                    if (!fileExists(file: "${diretorio}/${script}")) {
+                        msg = "Script ${diretorio}/${script} para matar as sessões antes do revert não encontrado"
+                        echo lib.status('E', msg)
+                        error msg
+                    }
+
+                    retorno = lib.executaScript("${diretorio}/${script}", database.conexao, modo_Dry_Run)
+                    echo "Retorno da execução: ${retorno}"
+
+                    if (!modo_Dry_Run) {
+                        if (retorno.toUpperCase().contains('ERROR')) {
+                            msg = 'Script que mata as sessões do banco de dados antes do revert está com erro'
+                            echo lib.status('E', msg)
+                            error msg
+                        } else if (!retorno.toUpperCase().contains('COMPLETED')) {
+                            msg = 'Script que mata as sessões do banco de dados antes do revert não executou'
+                            echo lib.status('E', msg)
+                            error msg
+                        }
+                    }
+                    echo lib.status('S', 'Final do Script que Mata as Sessões do Banco de Dados Antes do Revert')
+                    lib.flushLog()
+                } // script
+            } // steps
+        } // stage 'Mata Sessões'
+
+
+        stage('Revert') {
+            steps {
+                script {
+                    echo lib.linha('Red', "Início do Revert dos Objetos Planejados no Banco ${database.descricao}")
+                    def diretorioRaiz
+                    def diretorioObj
+                    def objeto
+                    def script
+                    def comando
+                    def retorno
+
+                    // Modo dry-run
+                    if (modo_Dry_Run) {
+                        echo lib.status('A', 'Revert rodando em modo Dry-Run! Nenhuma alteração será feita no banco de dados!')
+                    }
+
+                    diretorioRaiz = jsonObjs.diretorioRaiz.revert
+                    jsonPlan.tarefas.each { tar ->
+                        objeto = jsonObjs.objetos.find { obj ->
+                            obj.tipo == tar.tipo.capitalize()
+                        }
+
+                        echo lib.linha('Red', "Revertendo ${objeto.tipo}")
+
+                        diretorioObj = "${diretorioRaiz}/${objeto.diretorio}"
+
+                        tar.objetos.each { obj ->
+                            script = "${diretorioObj}/${obj.nome}"
+
+                            disp = [
+                                lib.label('Blu', 'Arquivo', obj.nome, 'T'),
+                                lib.label('Blu', 'Diretório', diretorioObj, 'T'),
+                                lib.label('Blu', 'Descrição', obj.descricao, 'T')
+                            ]
+                            echo lib.texto(disp)
+
+                            retorno = lib.executaScript(script, database.conexao, modo_Dry_Run)
+                            echo "Retorno da execução: ${retorno}"
+
+                            if (!modo_Dry_Run) {
+                                retorno = retorno.toUpperCase()
+                                switch (true) {
+                                    case retorno.contains('ERROR'):
+                                        msg = "Erro aplicando ${objeto.tipo} ${obj.nome} - Revert abortado!"
+                                        echo lib.status('E', msg)
+                                        error msg
+                                    case retorno.contains('CREATED'):
+                                        echo lib.linha('Grn', "${objeto.tipo} ${obj.nome} criado")
+                                        break
+                                    case retorno.contains('ALTERED'):
+                                        echo lib.linha('Grn', "${objeto.tipo} ${obj.nome} alterado")
+                                        break
+                                    case retorno.contains('COMPLETED'):
+                                        echo lib.linha('Grn', "${objeto.tipo} ${obj.nome} executado")
+                                        break
+                                    default:
+                                        echo lib.text('Grn', 'Processo concluído')
+                                }
+                            }
+                        }
+                    }
+                    echo lib.status('S', "Final do Revert dos Objetos Planejados no Banco ${database.descricao}")
+                    lib.flushLog()
+                } // script
+            } // steps
+        } // stage 'Revert'
+
+
+        stage('Lista Inválidos') {
+            steps {
+                script {
+                    if (!acao.listarInvalidos) {
+                        echo lib.linha('Blu', 'Listagem de objetos inválidos após o revert está inativa no planejamento - nenhuma ação foi executada')
+                        return
+                    }
+                    echo lib.linha('Blu', 'Lista Objetos Inválidos Após o Revert')
+                    def script
+                    def diretorio
+                    def retorno
+
+                    // Modo dry-run
+                    if (modo_Dry_Run) {
+                        echo lib.status('A', 'Revert rodando em modo Dry-Run! Nenhuma alteração será feita no banco de dados!')
+                    }
+
+                    echo lib.linha('Blk', 'Verificando script')
+
+                    script = jsonConf.scripts.listInvalids.nome
+                    diretorio = jsonConf.scripts.listInvalids.diretorio
+
+                    disp = [
+                        lib.label('Blk', 'Script', script, 'T'),
+                        lib.label('Blk', 'Diretório', diretorio, 'T')
+                    ]
+                    echo lib.texto(disp)
+
+                    if (!fileExists(file: "${diretorio}/${script}")) {
+                        msg = "Script ${diretorio}/${script} para listar objetos inválidos após o revert não encontrado"
+                        echo lib.status('E', msg)
+                        error msg
+                    }
+
+                    retorno = lib.executaScript("${diretorio}/${script}", database.conexao, modo_Dry_Run)
+                    echo "Retorno da execução: ${retorno}"
+
+                    if (!modo_Dry_Run) {
+                        if (retorno.toUpperCase().contains('ERROR')) {
+                            msg = 'Script que lista objetos inválidos após o revert está com erro'
+                            echo lib.status('E', msg)
+                            error msg
+                        } else if (!retorno.toUpperCase().contains('COMPLETED')) {
+                            msg = 'Script que lista objetos inválidos após o revert não executou'
+                            echo lib.status('E', msg)
+                            error msg
+                        }
+                    }
+                    echo lib.status('S', 'Final do Script que Lista os Objetos Inválidos Após o Revert')
+                    lib.flushLog()
+                } // script
+            } // steps
+        } // stage 'Lista Inválidos'
+
+
+        stage('Recompila Objetos') {
+            steps {
+                script {
+                    if (!acao.recompilarObjetos) {
+                        echo lib.linha('Blu', 'Recompilação de objetos após o revert está inativa no planejamento - nenhuma ação foi executada')
+                        return
+                    }
+                    echo lib.linha('Blu', 'Recompila Objetos Após o Revert')
+                    def script
+                    def diretorio
+                    def retorno
+
+                    // Modo dry-run
+                    if (modo_Dry_Run) {
+                        echo lib.status('A', 'Revert rodando em modo Dry-Run! Nenhuma alteração será feita no banco de dados!')
+                    }
+
+                    echo lib.linha('Blk', 'Verificando script')
+
+                    script = jsonConf.scripts.compileObjects.nome
+                    diretorio = jsonConf.scripts.compileObjects.diretorio
+
+                    disp = [
+                        lib.label('Blk', 'Script', script, 'T'),
+                        lib.label('Blk', 'Diretório', diretorio, 'T')
+                    ]
+                    echo lib.texto(disp)
+
+                    if (!fileExists(file: "${diretorio}/${script}")) {
+                        msg = "Script ${diretorio}/${script} para recompilar objetos inválidos após o revert não encontrado"
+                        echo lib.status('E', msg)
+                        error msg
+                    }
+
+                    retorno = lib.executaScript("${diretorio}/${script}", database.conexao, modo_Dry_Run)
+                    echo "Retorno da execução: ${retorno}"
+
+                    if (!modo_Dry_Run) {
+                        if (retorno.toUpperCase().contains('ERROR')) {
+                            msg = 'Script que recompila objetos após o revert está com erro'
+                            echo lib.status('E', msg)
+                            error msg
+                        } else if (!retorno.toUpperCase().contains('COMPLETED')) {
+                            msg = 'Script que recompila objetos após o revert não executou'
+                            echo lib.status('E', msg)
+                            error msg
+                        }
+                    }
+                    echo lib.status('S', 'Final do Script que Recompila os Objetos Após o Revert')
+                    lib.flushLog()
+                } // script
+            } // steps
+        } // stage 'Recompila Objetos'
+
+    } // stages
+
+
+    post {
+        always {
+            script {
+                if (lib.log.create) {
+                    lib.flushLog()
+                    lib.finishLog()
+                    archiveArtifacts artifacts: lib.log.name, fingerprint: true, onlyIfSuccessful: false
+                    echo lib.status('S', "Log ${lib.log.name} do revert disponível nos artefatos do build")
+                }
+            } // script
+        } // always
+    } // post
+
+} // pipeline

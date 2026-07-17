@@ -1,0 +1,60 @@
+{
+    "diretorioRaiz": {
+        "deploy": "Deploy",
+        "revert": "Revert"
+    },
+    "objetos": [
+        {
+            "tipo": "Function",
+            "diretorio": "Functions"
+        },
+        {
+            "tipo": "Index",
+            "diretorio": "Indexes"
+        },
+        {
+            "tipo": "Java",
+            "diretorio": "Java"
+        },
+        {
+            "tipo": "Job",
+            "diretorio": "Jobs"
+        },
+        {
+            "tipo": "Package",
+            "diretorio": "Packages"
+        },
+        {
+            "tipo": "Procedure",
+            "diretorio": "Procedures"
+        },
+        {
+            "tipo": "Schedule",
+            "diretorio": "Schedules"
+        },
+        {
+            "tipo": "Script",
+            "diretorio": "Scripts"
+        },
+        {
+            "tipo": "Sequence",
+            "diretorio": "Sequences"
+        },
+        {
+            "tipo": "Synonym",
+            "diretorio": "Synonyms"
+        },
+        {
+            "tipo": "Table",
+            "diretorio": "Tables"
+        },
+        {
+            "tipo": "Trigger",
+            "diretorio": "Triggers"
+        },
+        {
+            "tipo": "View",
+            "diretorio": "Views"
+        }
+    ]
+}
