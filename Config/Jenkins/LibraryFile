@@ -78,7 +78,7 @@ def runScript(String script, String connection, String objectType = '') {
     } catch (Exception e) {
         // Erro crítico na execução do comando: coloca na console e aborta
         echo status('E', "Falha rodando script no SQL*Plus:\n${e.getMessage()}")
-        error status('E', "Falha carregando a biblioteca")
+        error status('E', "Falha rodando o comando")
     }
     
     return retorno
@@ -283,6 +283,10 @@ def getBuildStarter() {
     log.text.clear()
 }
 */
+
+
+
+
 
 
 

@@ -172,9 +172,6 @@ pipeline {
                     // Carrega o indicativo da consistência do revert
                     consistRevert = jsonConf.consistRevert
 
-                    echo consistRevert
-
-
                     // Variável para armazenar o diretório raiz do repositório
                     diretorioRaiz = jsonConf.rootDirectories.deploy
 
