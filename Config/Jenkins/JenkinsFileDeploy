@@ -1,13 +1,24 @@
+//import groovy.sql.Sql
+//import java.sql.Driver
+//import java.sql.DriverManager
+import java.util.ServiceLoader
+
+// Variáveis que indicam a seleção da branch e da tag
+def selectBranch = false
+def selectTag    = false
+
 // Variável para o arquivo da biblioteca
 def lib
 
+// Variável de controle para o parâmetro de Dry-Run
+def modo_Dry_Run = false
+
 // Variáveis para os objetos JSON
-def jsonConf // Parâmetros de configuração
+def jsonConf // Config do ambiente
 def jsonData // Informações dos bancos de dados
+def jsonObjs // Informações dos objetos
 def jsonPlan // Planejamento do deploy
 def jsonRevt // Planejamento do revert
-
-def consistRevert = false
 
 // Variável para os dados do database
 def database = [
@@ -19,33 +30,17 @@ def database = [
 ]
 
 // Variável com as ações configuradas no planejamento
-/*def acao = [
+def acao = [
     matarSessoes     : false,
     listarInvalidos  : false,
     recompilarObjetos: false
 ]
-*/
 
-def acao = [
-    matarSessoes     : [
-        executar: false,
-        script  : ''
-    ],
-    listarInvalidos  : [
-        executar: false,
-        script  : ''
-    ],
-    recompilarObjetos: [
-        executar: false,
-        script  : ''
-    ]
-]
+// Variável para display único em várias linhas
+def disp = []
 
-// Variável para armazenar o diretório raiz do repositório
-def diretorioRaiz = ''
-
-// Variável para display de texto em bloco
-def texto = []
+// Variável para mensagens
+def msg = ''
 
 
 pipeline {
@@ -53,11 +48,15 @@ pipeline {
     environment {
         // Credencial de conexão com o banco de dados
         DB_CONN = credentials('DevOps_DB')
+        //DB_CONN = credentials('TiagoG_DB')
     }
 
     options {
         // Altera o funcionamento default e não faz o checkout do SCM no início do job
         skipDefaultCheckout(true)
+
+        // Mensagens coloridas na console do build
+        ansiColor('xterm')
     }
 
     stages {
@@ -76,16 +75,34 @@ pipeline {
             steps {
                 script {
                     echo 'Realizando Checkout do Repositório'
+                    def origem
+                    //selectBranch = !Branch.startsWith('None')
+                    //selectTag    = !Tag.startsWith('None')
+                    selectBranch = Branch != 'None'
+                    selectTag    = Tag != 'None'
 
+                    // Gerenciamento do checkout do repositório: a prioridade são os Tags
                     // Verifica se o parâmetro Tag foi selecionado
-                    if (Tag == 'None') {
-                        error 'É necessário selecionar uma Tag para o checkout do repositório e deploy!'
+                    if (selectTag) {
+                        if (selectBranch) {
+                            error 'Deve ser selecionada apenas uma Tag ou uma Branch para o checkout e deploy!'
+                        }
+                        origem = Tag
+                        echo "Realizando checkout da Tag: ${Tag}"
+                    } else {
+                        // Caso contrário (não selecionou uma Tag), faz o checkout da Branch definido
+                        if (selectBranch) {
+                            origem = Branch
+                            echo "Realizando checkout da Branch: ${Branch}"
+                        } else {
+                            error 'É necessário selecionar uma Tag ou uma Branch para o checkout e deploy!'
+                        }
                     }
-
-                    echo "Realizando checkout da Tag: ${Tag}"
                     checkout scm: ([
                         $class: 'GitSCM',
-                        branches: [[name: Tag]],
+                        //branches: [[name: "refs/tags/${Tag}"]],
+                        //branches: [[name: "*/${Branch}"]],
+                        branches: [[name: origem]],
                         userRemoteConfigs: scm.userRemoteConfigs,
                         extensions: scm.extensions
                     ])
@@ -98,74 +115,18 @@ pipeline {
         stage('Inicia Processo') {
             steps {
                 script {
-                    echo 'Início do Processo e Carga do Config'
-
-                    echo 'Carrega a biblioteca'
+                    echo 'Início do Processo'
+                    // Carrega o arquivo da biblioteca
                     try {
                         lib = load 'Config/Jenkins/LibraryFile'
                     } catch (Exception e) {
-                        // Erro crítico: coloca na console e aborta
-                        echo "Falha carregando a biblioteca (Config/Jenkins/LibraryFile):\n${e.getMessage()}"
-                        error "Falha carregando a biblioteca"
+                        // Erro crítico: mostra na hora e aborta
+                        error "Falha carregando arquivo da biblioteca (Config/Jenkins/LibraryFile): ${e.getMessage()}"
                     }
 
-                    // Nome do arquivo de config
-                    def confFile = 'Config/Jenkins/ConfigParam.json'
-                    echo "Processa arquivo JSON de parâmetros de configuração: ${confFile}"
-
-                    // Verifica se o arquivo JSON existe, se está válido e com dados
-                    try {
-                        jsonConf = lib.parseJSON(confFile, 'dos parâmetros de configuração')
-
-                    //} catch (hudson.AbortException e) {
-                    //    throw e
-                    } catch (Exception e) {
-                        //echo "Erro: ${e.getMessage()}"
-                        echo lib.status('E', "Arquivo JSON de configuração não pode ser carregado:\n${e.getMessage()}")
-                        error lib.status('E', 'Falha lendo/parseando arquivos JSON de configuração')
-                    }
-
-                    // Inicializaz'a variável que determina a criação do log da biblioteca
-                    lib.log.create = jsonConf.createLog
-
-                    echo lib.log.create
-
-
-                    try {
-
-                        echo 'antes'
-                        lib.createLog(
-                            action     : 'deploy',
-                            tag        : Tag,
-                            buildNumber: env.BUILD_NUMBER,
-                            username   : lib.getBuildStarter(),
-                            jobName    : env.JOB_NAME,
-                            workspace  : env.WORKSPACE
-                        )
-                    } catch (Throwable e) {
-                    } catch (Exception e) {
-                        //echo "Erro: ${e.getMessage()}"
-                        echo lib.status('A', "Arquivo de log não pode ser criado:\n${e.getMessage()}")
-                        echo lib.status('A', "Arquivo de log não pode ser criado:\n${e.toString()}")
-                        lib.log.create = false
-                    }
-                    echo 'depois'
-
-                    // Carrega o indicativo da consistência do revert
-                    consistRevert = jsonConf.consistRevert
-
-                    echo consistRevert
-
-
-                    // Variável para armazenar o diretório raiz do repositório
-                    diretorioRaiz = jsonConf.rootDirectories.deploy
-
-                    // Inicializa o nome dos scripts das ações
-                    acao.matarSessoes.script      = jsonConf.scripts.killSessions
-                    acao.listarInvalidos.script   = jsonConf.scripts.listInvalids
-                    acao.recompilarObjetos.script = jsonConf.scripts.compileObjects
-
-                    echo 'Início do Processo e Carga do Config Concluído'
+                    // Cria o arquivo de log
+                    lib.createLog('deploy', lib.getBuildStarter(), env.JOB_NAME, env.BUILD_NUMBER, env.WORKSPACE)
+                    echo 'Início do Processo Concluído'
                 } // script
             } // steps
         } // stage 'Inicia Processo'
@@ -174,41 +135,60 @@ pipeline {
         stage('Carrega JSONs') {
             steps {
                 script {
-                    echo lib.line('Início da Carga dos Arquivos JSON de Configuração e Planejamento')
+                    echo lib.linha('Blu', 'Início da Carga dos Arquivos JSON de Configuração e Planejamento')
+                    def planFile
+                    def revtFile
 
                     // Nome dos arquivos
+                    def confFile = 'Config/Jenkins/ConfigParam.json'
                     def dataFile = 'Config/Jenkins/DatabaseParam.json'
-                    def planFile = "Config/Plannings/Planning_Deploy.json"
-                    def revtFile = "Config/Plannings/Planning_Revert.json"
+                    def objsFile = 'Config/Jenkins/ObjectsParam.json'
 
-                    texto = [
-                        lib.text('Arquivos JSON'),
-                        lib.text("Banco de Dados: ${dataFile}"),
-                        lib.text("Planejamento do Deploy: ${planFile}")
+                    // O nome do planejamento depende dos parâmetros do job
+                    if (selectTag) {
+                        planFile = "Config/Planning/Plan_${Tag}_Deploy.json"
+                        revtFile = "Config/Planning/Plan_${Tag}_Revert.json"
+                    } else {
+                        if (selectBranch) {
+                            planFile = "Config/Planning/Plan_${Branch.replace("/", "_")}_Deploy.json"
+                            revtFile = "Config/Planning/Plan_${Branch.replace("/", "_")}_Revert.json"
+                        }
+                    }
+
+                    disp = [
+                        lib.linha('Blk', 'Arquivos JSON', 'T'),
+                        lib.label('Blk', 'Configuração', confFile, 'T'),
+                        lib.label('Blk', 'Banco de Dados', dataFile, 'T'),
+                        lib.label('Blk', 'Objetos', objsFile, 'T'),
+                        lib.label('Blk', 'Planejamento do Deploy', planFile, 'T')
                     ]
 
-                    if (consistRevert) {
-                        texto << lib.text("Planejamento do Revert: ${revtFile}")
+                    if (lib.consist.revertFile) {
+                        disp << lib.label('Blk', 'Planejamento do Revert', revtFile, 'T')
                     }
-                    echo lib.writeText(texto)
+
+                    echo lib.texto(disp)
 
                     // Verifica se os arquivos JSON existem, se estão válidos e com dados
                     try {
-                        jsonData = lib.parseJSON(dataFile, 'do banco de dados')
-                        jsonPlan = lib.parseJSON(planFile, 'do planejamento para o deploy')
+                        jsonConf = lib.processaJSON(confFile, 'de configuração')
+                        jsonData = lib.processaJSON(dataFile, 'do banco de dados')
+                        jsonObjs = lib.processaJSON(objsFile, 'dos parâmetros de objetos')
+                        jsonPlan = lib.processaJSON(planFile, 'do planejamento para o deploy')
 
-                        if (consistRevert) {
-                            jsonRevt = lib.parseJSON(revtFile, 'do planejamento para o revert')
+                        if (lib.consist.revertFile) {
+                            jsonRevt = lib.processaJSON(revtFile, 'do planejamento para o revert')
                         }
-
-                    //} catch (hudson.AbortException e) {
-                    //    throw e
+                    } catch (hudson.AbortException e) {
+                        throw e
                     } catch (Exception e) {
-                        //echo "Erro: ${e.getMessage()}"
-                        echo lib.status('E', "Não foi possível ler/parsear os arquivos JSON:\n${e.getMessage()}")
-                        error 'Falha lendo/parseando arquivos JSON'
+                        msg = 'Falha lendo/parseando arquivos JSON'
+                        echo lib.status('E', msg)
+                        echo lib.linha('Red', "Erro: ${e.getMessage()}")
+                        error msg
                     }
-                    echo lib.line('Final da Carga dos Arquivos JSON de Configuração e Planejamento')
+                    echo lib.status('S', 'Final da Carga dos Arquivos JSON de Configuração')
+                    lib.flushLog()
                 } // script
             } // steps
         } // stage 'Carrega JSONs'
@@ -217,44 +197,119 @@ pipeline {
         stage('Processa Parâmetros') {
             steps {
                 script {
-                    echo lib.line('Início do Processamento dos Parâmetros do Planejamento Para Deploy')
-                    def nomeDB
+                    echo lib.linha('Blu', 'Início do Processamento dos Parâmetros do Planejamento Para Deploy')
                     def dbConfig
+                    def descricaoBD
+                    def exigeBranch
+                    def exigeTag
                     def usuario
+                    def origem
 
-                    // Valida a Tag selecionada com a Tag do planejamento
-                    if (jsonPlan.tag != Tag) {
-                        error lib.status('E', "Tag do planejamento ${jsonPlan.tag} é diferente da tag parametrizada ${Tag}")
+                    disp = [
+                        lib.linha('Blu', 'Dados do Build', 'T'),
+                        lib.label('Blu', 'Username', lib.getBuildStarter(), 'T'),
+                        lib.label('Blu', 'Job Name', env.JOB_NAME, 'T'),
+                        lib.label('Blu', 'Build #', env.BUILD_NUMBER, 'T'),
+                        lib.label('Blu', 'Workspace', env.WORKSPACE, 'T')
+                    ]
+                    echo lib.texto(disp)
+
+                    // Consistência da execução
+                    if (jsonPlan.executar != 'Deploy') {
+                        msg = "Planejamento para o deploy com execução inconsistente: ${jsonPlan.executar}"
+                        echo lib.status('E', msg)
+                        error msg
                     }
 
-                    if (consistRevert) {
-                        if (jsonRevt.tag != Tag) {
-                            error lib.status('E', "Tag do planejamento de Revert ${jsonRevt.tag} é diferente da tag parametrizada ${Tag}")
+                    // Origem dos scripts - Branch ou Tag
+                    if (jsonPlan.tag == '' && jsonPlan.branch == '') { // Nenhum informado
+                        msg = 'Planejamento para o deploy sem branch e tag informadas! Uma das informações deve constar'
+                        echo lib.status('E', msg)
+                        error msg
+                    } else if (jsonPlan.tag != '' && jsonPlan.branch != '') { // Ambos informados
+                        msg = 'Planejamento para o deploy com branch e tag informadas! Apenas uma informação deve constar'
+                        echo lib.status('E', msg)
+                        error msg
+                    }
+
+                    // Consistência do banco de dados
+                    dbConfig = jsonConf.databases[Database]
+                    if (dbConfig) {
+                        descricaoBD = dbConfig.descricao
+                        exigeBranch = dbConfig.exigeBranch
+                        exigeTag    = dbConfig.exigeTag
+                    } else { // Database não previsto
+                        msg = "Banco de dados ${Database} não previsto para deploy"
+                        echo lib.status('E', msg)
+                        error msg
+                    }
+
+                    if (jsonPlan.tag != '') {
+                        if (jsonPlan.tag == Tag) {
+                            echo lib.status('S', 'Tag selecionada encontrada no planejamento do deploy')
+
+                            // Descrição do build
+                            usuario = jsonPlan.autor.trim().split()[0] // Primeiro nome do analista
+                            currentBuild.description = "Tag: ${Tag} | Usr: ${usuario} | DB: ${descricaoBD}"
+
+                            origem = lib.label('Blk', 'Tag', jsonPlan.tag, 'T')
+                        } else { // Tag não encontrada no planejamento
+                            msg = "Planejamento para o deploy com tag inconsistente! Informada: ${jsonPlan.tag} e selecionada: ${Tag}"
+                            echo lib.status('E', msg)
+                            error msg
                         }
                     }
 
-                    if (Database == 'homolog') {
-                        nomeDB = 'Homologação'
-                    } else if (Database == 'prod') {
-                        nomeDB = 'Produção'
+                    if (jsonPlan.branch != '') {
+                        if (jsonPlan.branch == Branch) {
+                            echo lib.status('S', 'Branch selecionada encontrada no planejamento do deploy')
+
+                            // Descrição do build
+                            usuario = jsonPlan.autor.trim().split()[0] // Primeiro nome do analista
+                            currentBuild.description = "Branch: ${Branch} | Usr: ${usuario} | DB: ${descricaoBD}"
+
+                            origem = lib.label('Blk', 'Branch', jsonPlan.branch, 'T')
+                        } else { // Branch não encontrada no planejamento
+                            msg = "Planejamento para o deploy com branch inconsistente! Informada: ${jsonPlan.branch} e selecionada: ${Branch}"
+                            echo lib.status('E', msg)
+                            error msg
+                        }
                     }
 
-                    // Descrição do build
-                    usuario = jsonPlan.autor.trim().split()[0] // Primeiro nome do analista
-                    currentBuild.description = "Tag: ${Tag} | Usr: ${usuario} | DB: ${nomeDB}"
+                    // Modo dry-run
+                    modo_Dry_Run = jsonPlan.modo_Dry_Run
+                    if (modo_Dry_Run) {
+                        echo lib.status('A', 'Deploy rodando em modo Dry-Run! Nenhuma alteração será feita no banco de dados!')
+                    }
 
-                    texto = [
-                        lib.text('Parâmetros de Execução do Build'),
-                        lib.text("Tag: ${Tag}"),
-                        lib.text("Database: ${nomeDB}"),
-                        lib.text(''),
-                        lib.text('Dados do Build'),
-                        lib.text("Username: ${lib.getBuildStarter()}"),
-                        lib.text("Job Name: ${env.JOB_NAME}"),
-                        lib.text("Build #: ${env.BUILD_NUMBER}"),
-                        lib.text("Workspace: ${env.WORKSPACE}")
-                    ]
-                    echo lib.writeText(texto)
+                    // Parâmetros exigidos pelo banco de dados
+                    if (exigeBranch) {
+                        if (selectBranch) {
+                            if (!lib.consisteNome(Branch, 'branch')) {
+                                msg = "Padrão de nomenclatura inválido na branch: ${Branch}. O formato é categoria/prefixo-numero."
+                                echo lib.status('E', msg)
+                                error msg
+                            }
+                        } else {
+                            msg = "Para o deploy no banco de dados ${descricaoBD} é necessário selecionar a branch."
+                            echo lib.status('E', msg)
+                            error msg
+                        }
+                    }
+
+                    if (exigeTag) {
+                        if (selectTag) {
+                            if (!lib.consisteNome(Tag, 'tag')) {
+                                msg = "Padrão de nomenclatura inválido na tag: ${Tag}. O formato é vAAAA.MM.DD.SQ"
+                                echo lib.status('E', msg)
+                                error msg
+                            }
+                        } else {
+                            msg = "Para o deploy no banco de dados ${descricao} é necessário selecionar a tag."
+                            echo lib.status('E', msg)
+                            error msg
+                        }
+                    }
 
                     // Dados do database
                     database.descricao   = jsonData[Database].descricao
@@ -266,43 +321,72 @@ pipeline {
 
                     // Mensagem de alerta para database de produção
                     if (Database == 'prod') {
-                        texto = [
-                            lib.text(''),
-                            lib.text('------------------------------'),
-                            lib.text('          ATENÇÃO             '),
-                            lib.text('Deploy no database de produção'),
-                            lib.text('------------------------------'),
-                            lib.text('')
+                        disp = [
+                            lib.linha('Red', '---------------------------------------------', 'T'),
+                            lib.linha('Red', '                  ATENÇÃO                    ', 'T'),
+                            lib.linha('Red', "Database de produção selecionado para depploy", 'T'),
+                            lib.linha('Red', '---------------------------------------------', 'T')
                         ]
-                        echo lib.writeText(texto)
+                        echo lib.texto(disp)
+                    }
+
+                    if (lib.consist.revertFile) {
+                        // Consistência do tipo de execução e da tag do planejamento para revert
+                        if (jsonRevt.executar != 'Revert') {
+                            msg = "Planejamento para o revert com execução inconsistente: ${jsonRevt.executar}"
+                            echo lib.status('E', msg)
+                            error msg
+                        }
+
+                        if (jsonRevt.tag != '') {
+                            if (jsonRevt.tag == Tag) {
+                                echo lib.status('S', 'Tag selecionada encontrada no planejamento do revert')
+                            } else { // Tag não encontrada no planejamento
+                                msg = "Planejamento para o revert com tag inconsistente! Informada: ${jsonRevt.tag} e selecionada: ${Tag}"
+                                echo lib.status('E', msg)
+                                error msg
+                            }
+                        } else {
+                            if (jsonRevt.branch != '') {
+                                if (jsonRevt.branch == Branch) {
+                                    echo lib.status('S', 'Branch selecionada encontrada no planejamento do revert')
+                                } else { // Branch não encontrada no planejamento
+                                    msg = "Planejamento para o revert com branch inconsistente! Informada: ${jsonRevt.branch} e selecionada: ${Branch}"
+                                    echo lib.status('E', msg)
+                                    error msg
+                                }
+                            }
+                        }
                     }
 
                     // Ações planejadas
-                    acao.matarSessoes.executar      = jsonPlan.acoes.matarSessoes
-                    acao.listarInvalidos.executar   = jsonPlan.acoes.listarInvalidos
-                    acao.recompilarObjetos.executar = jsonPlan.acoes.recompilarObjetos
+                    acao.matarSessoes      = jsonPlan.acoes.matarSessoes
+                    acao.listarInvalidos   = jsonPlan.acoes.listarInvalidos
+                    acao.recompilarObjetos = jsonPlan.acoes.recompilarObjetos
 
-                    texto = [
-                        lib.text(''),
-                        lib.text('Informações do Planejamento'),
-                        lib.text("Autor: ${jsonPlan.autor}"),
-                        lib.text("Data: ${jsonPlan.data}"),
-                        lib.text("Descrição: ${jsonPlan.descricao}"),
-                        lib.text("Tag: ${jsonPlan.tag}"),
-                        lib.text(''),
-                        lib.text('Ações Planejadas'),
-                        lib.text("Matar sessões: ${jsonPlan.acoes.matarSessoes ? 'SIM' : 'NÃO'}"),
-                        lib.text("Listar inválidos: ${jsonPlan.acoes.listarInvalidos ? 'SIM' : 'NÃO'}"),
-                        lib.text("Recompilar objetos: ${jsonPlan.acoes.recompilarObjetos ? 'SIM' : 'NÃO'}"),
-                        lib.text(''),
-                        lib.text('Database'),
-                        lib.text("Destino: ${database.descricao}"),
-                        lib.text("Endereço IP: ${database.enderecoIP}"),
-                        lib.text("Porta: ${database.porta}"),
-                        lib.text("Service name: ${database.serviceName}"),
-                        lib.text('')
+                    disp = [
+                        '',
+                        lib.linha('Blk', 'Informações do Planejamento', 'T'),
+                        origem, //lib.label('Blk', 'Tag', jsonPlan.tag, 'T'),
+                        lib.label('Blk', 'Descrição', jsonPlan.descricao, 'T'),
+                        lib.label('Blk', 'Autor', jsonPlan.autor, 'T'),
+                        lib.label('Blk', 'Data', jsonPlan.data, 'T'),
+                        lib.linha('Blk', ' ', 'T'),
+
+                        lib.linha('Blk', 'Ações', 'T'),
+                        lib.label('Red', 'Matar sessões', jsonPlan.acoes.matarSessoes ? 'SIM_RED' : 'NAO_GRN', 'T'),
+                        lib.label('Blk', 'Listar inválidos', jsonPlan.acoes.listarInvalidos ? 'SIM_GRN' : 'NAO_RED', 'T'),
+                        lib.label('Blk', 'Recompilar objetos', jsonPlan.acoes.recompilarObjetos ? 'SIM_GRN' : 'NAO_RED', 'T'),
+                        lib.linha('Blk', ' ', 'T'),
+
+                        lib.linha('Blk', 'Database', 'T'),
+                        lib.label('Blk', 'Destino', database.descricao, 'T'),
+                        lib.label('Blk', 'Endereço IP', database.enderecoIP, 'T'),
+                        lib.label('Blk', 'Porta', database.porta, 'T'),
+                        lib.label('Blk', 'Service name', database.serviceName, 'T'),
+                        ''
                     ]
-                    echo lib.writeText(texto)
+                    echo lib.texto(disp)
 
                     // Verifica ações ativas
                     if (!jsonPlan.acoes.matarSessoes &&
@@ -310,7 +394,8 @@ pipeline {
                         !jsonPlan.acoes.recompilarObjetos) {
                         echo lib.status('A', 'Nenhuma ação adicional planejada')
                     }
-                    echo lib.line('Final do Processamento dos Parâmetros do Planejamento Para Deploy')
+                    echo lib.status('S', 'Final do Processamento dos Parâmetros do Planejamento Para Deploy')
+                    lib.flushLog()
                 } // script
             } // steps
         } // stage 'Processa Parâmetros'
@@ -319,33 +404,57 @@ pipeline {
         stage('Valida Objetos') {
             steps {
                 script {
-                    echo lib.line('Início da Validação dos Objetos Planejados Para Deploy')
+                    echo lib.linha('Blu', 'Início da Validação dos Objetos Planejados Para Deploy')
+                    def diretorioRaiz
+                    def diretorioObj
+                    def objeto
+                    def script
                     def comando
                     def retorno
 
-                    jsonPlan.objetos.each { obj ->
-                        lib.line("Verifica a existência do arquivo: ${diretorioRaiz}/${obj.nome}")
-                        if (!fileExists(file: "${diretorioRaiz}/${obj.nome}")) {
-                            error lib.status('E', "Arquivo ${diretorioRaiz}/${obj.nome} programado para deploy não encontrado")
+                    diretorioRaiz = jsonObjs.diretorioRaiz.deploy
+                    jsonPlan.tarefas.each { tar ->
+                        objeto = jsonObjs.objetos.find { obj ->
+                            obj.tipo == tar.tipo.capitalize()
                         }
-                        echo lib.line("Arquivo: ${diretorioRaiz}/${obj.nome}")
-
-                        lib.line('Verifica encoding do arquivo')
-                        //comando = "uchardet ${diretorioRaiz}/${obj.nome}"
-                        //retorno = sh(script: comando, returnStdout: true).trim().toUpperCase()
-
-                        comando = "file -bi ${diretorioRaiz}/${obj.nome} | awk -F'charset=' '{print \$2}'"
-                        retorno = sh(script: comando, returnStdout: true).trim().toUpperCase()
-
-                        // ASCII é um subset do UTF-8 e apenas indica um arquivo sem acentos ou caracteres especias
-                        if (retorno in ['US-ASCII', 'UTF-8']) {
-                            echo lib.status('S', "Encoding válido: ${retorno}")
+                        if (objeto) {
+                            diretorioObj = "${diretorioRaiz}/${objeto.diretorio}"
                         } else {
-                            echo lib.status('E', "Encoding inválido: ${retorno}")
-                            error lib.status('E', "Arquivo ${diretorioRaiz}/${obj.nome} programado para deploy não está em US-ASCII ou UTF-8")
+                            msg = "Tipo de objeto planejado para deploy não encontrado na configuração de objetos: ${tar.tipo.capitalize()}"
+                            echo lib.status('E', msg)
+                            error msg
+                        }
+
+                        tar.objetos.each { obj ->
+                            script = "${diretorioObj}/${obj.nome}"
+                            // Verifica a existência do arquivo
+                            if (!fileExists(file: script)) {
+                                echo lib.status('E', "Arquivo ${script} programado para deploy não encontrado")
+                                error "Arquivo ${script} programado para deploy não encontrado"
+                            }
+
+                            echo lib.label('Grn', 'Arquivo', script)
+
+                            // Verifica encoding do arquivo
+                            /* O comando uchardet está retornando o erro: command not found
+                            comando = "uchardet ${script}"
+                            retorno = sh(script: comando, returnStdout: true).trim().toUpperCase()*/
+
+                            comando = "file -bi ${script} | awk -F'charset=' '{print \$2}'"
+                            retorno = sh(script: comando, returnStdout: true).trim().toUpperCase()
+
+                            // ASCII é um subset do UTF-8 e apenas indica um arquivo sem acentos ou caracteres especias
+                            if (retorno in ['US-ASCII', 'UTF-8']) {
+                                echo lib.label('Grn', 'Encoding válido', retorno)
+                            } else {
+                                echo lib.label('Red', 'Encoding inválido', retorno)
+                                echo lib.status('E', "Arquivo ${script} programado para deploy não está em UTF-8")
+                                error "Arquivo ${script} programado para deploy não está em UTF-8"
+                            }
                         }
                     }
-                    echo lib.line('Final da Validação dos Tipos de Arquivos Planejados Para Deploy')
+                    echo lib.status('S', 'Final da Validação dos Tipos de Arquivos Planejados Para Deploy')
+                    lib.flushLog()
                 } // script
             } // steps
         } // stage 'Valida Objetos'
@@ -354,30 +463,53 @@ pipeline {
         stage('Mata Sessões') {
             steps {
                 script {
-                    if (!acao.matarSessoes.executar) {
-                        echo lib.status('A', 'Matar as sessões do banco de dados antes do deploy está inativa no planejamento - nenhuma ação foi executada')
+                    if (!acao.matarSessoes) {
+                        echo lib.linha('Blu', 'Matar as sessões do banco de dados antes do deploy está inativa no planejamento - nenhuma ação foi executada')
                         return
                     }
-                    echo lib.status('A', 'Mata as Sessões do Banco de Dados Antes do Deploy')
-                    def script = acao.matarSessoes.script
+                    echo lib.linha('Red', 'Mata as Sessões do Banco de Dados Antes do Deploy')
+                    def script
+                    def diretorio
                     def retorno
 
-                    echo lib.line("Verificando Script: ${script}")
-
-                    if (!fileExists(file: script)) {
-                        error lib.status('E', "Script ${script} para matar as sessões antes do deploy não encontrado")
+                    // Modo dry-run
+                    if (modo_Dry_Run) {
+                        echo lib.status('A', 'Deploy rodando em modo Dry-Run! Nenhuma alteração será feita no banco de dados!')
                     }
 
-                    retorno = lib.runScript(script, database.conexao)
-                    echo lib.line("Retorno da execução:\n${retorno}")
+                    echo lib.linha('Blk', 'Verificando script')
 
-                    if (retorno.toUpperCase().contains('ERROR')) {
-                        error lib.status('E', 'Script que mata as sessões do banco de dados antes do deploy está com erro')
-                    } else if (!retorno.toUpperCase().contains('COMPLETED')) {
-                        error lib.status('E', 'Script que mata as sessões do banco de dados antes do deploy não executou')
+                    script = jsonConf.scripts.killSessions.nome
+                    diretorio = jsonConf.scripts.killSessions.diretorio
+
+                    disp = [
+                        lib.label('Blk', 'Script', script, 'T'),
+                        lib.label('Blk', 'Diretório', diretorio, 'T')
+                    ]
+                    echo lib.texto(disp)
+
+                    if (!fileExists(file: "${diretorio}/${script}")) {
+                        msg = "Script ${diretorio}/${script} para matar as sessões antes do deploy não encontrado"
+                        echo lib.status('E', msg)
+                        error msg
                     }
 
-                    echo lib.line('Final do Script que Mata as Sessões do Banco de Dados Antes do Deploy')
+                    retorno = lib.executaScript("${diretorio}/${script}", database.conexao, modo_Dry_Run)
+                    echo "Retorno da execução: ${retorno}"
+
+                    if (!modo_Dry_Run) {
+                        if (retorno.toUpperCase().contains('ERROR')) {
+                            msg = 'Script que mata as sessões do banco de dados antes do deploy está com erro'
+                            echo lib.status('E', msg)
+                            error msg
+                        } else if (!retorno.toUpperCase().contains('COMPLETED')) {
+                            msg = 'Script que mata as sessões do banco de dados antes do deploy não executou'
+                            echo lib.status('E', msg)
+                            error msg
+                        }
+                    }
+                    echo lib.status('S', 'Final do Script que Mata as Sessões do Banco de Dados Antes do Deploy')
+                    lib.flushLog()
                 } // script
             } // steps
         } // stage 'Mata Sessões'
@@ -386,41 +518,66 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    echo lib.line("Início do Deploy dos Objetos Planejados no Banco ${database.descricao}")
-                    def tipoObjeto
+                    echo lib.linha('Blu', "Início do Deploy dos Objetos Planejados no Banco ${database.descricao}")
+                    def diretorioRaiz
+                    def diretorioObj
+                    def objeto
+                    def script
+                    def comando
                     def retorno
 
-                    jsonPlan.objetos.each { obj ->
-                        tipoObjeto = obj.nome.split('/')[0][0..-2].toLowerCase()
+                    // Modo dry-run
+                    if (modo_Dry_Run) {
+                        echo lib.status('A', 'Deploy rodando em modo Dry-Run! Nenhuma alteração será feita no banco de dados!')
+                    }
 
-                        texto = [
-                            lib.text("Arquivo: ${diretorioRaiz}/${obj.nome}"),
-                            lib.text("Descrição: ${obj.descricao}")
-                        ]
-                        echo lib.writeText(texto)
+                    diretorioRaiz = jsonObjs.diretorioRaiz.deploy
+                    jsonPlan.tarefas.each { tar ->
+                        objeto = jsonObjs.objetos.find { obj ->
+                            obj.tipo == tar.tipo.capitalize()
+                        }
 
-                        retorno = lib.runScript("${diretorioRaiz}/${obj.nome}", database.conexao, tipoObjeto)
-                        echo lib.line("Retorno da execução:\n${retorno}")
+                        echo lib.linha('Blk', "Aplicando ${objeto.tipo}")
 
-                        retorno = retorno.toUpperCase()
-                        switch (true) {
-                            case retorno.contains('ERROR'):
-                                error lib.status('E', "Erro aplicando ${obj.nome} - Deploy abortado!")
-                            case retorno.contains('CREATED'):
-                                echo lib.status('S', "${obj.nome} criado")
-                                break
-                            case retorno.contains('ALTERED'):
-                                echo lib.status('S', "${obj.nome} alterado")
-                                break
-                            case retorno.contains('COMPLETED'):
-                                echo lib.status('S', "${obj.nome} executado")
-                                break
-                            default:
-                                echo lib.status('S', 'Processo concluído')
-                                break
+                        diretorioObj = "${diretorioRaiz}/${objeto.diretorio}"
+
+                        tar.objetos.each { obj ->
+                            script = "${diretorioObj}/${obj.nome}"
+
+                            disp = [
+                                lib.label('Blu', 'Arquivo', obj.nome, 'T'),
+                                lib.label('Blu', 'Diretório', diretorioObj, 'T'),
+                                lib.label('Blu', 'Descrição', obj.descricao, 'T')
+                            ]
+                            echo lib.texto(disp)
+
+                            retorno = lib.executaScript(script, database.conexao, modo_Dry_Run)
+                            echo "Retorno da execução: ${retorno}"
+
+                            if (!modo_Dry_Run) {
+                                retorno = retorno.toUpperCase()
+                                switch (true) {
+                                    case retorno.contains('ERROR'):
+                                        msg = "Erro aplicando ${objeto.tipo} ${obj.nome} - Deploy abortado!"
+                                        echo lib.status('E', msg)
+                                        error msg
+                                    case retorno.contains('CREATED'):
+                                        echo lib.linha('Grn', "${objeto.tipo} ${obj.nome} criado")
+                                        break
+                                    case retorno.contains('ALTERED'):
+                                        echo lib.linha('Grn', "${objeto.tipo} ${obj.nome} alterado")
+                                        break
+                                    case retorno.contains('COMPLETED'):
+                                        echo lib.linha('Grn', "${objeto.tipo} ${obj.nome} executado")
+                                        break
+                                    default:
+                                        echo lib.text('Grn', 'Processo concluído')
+                                }
+                            }
                         }
                     }
-                    echo lib.line("Final do Deploy dos Objetos Planejados no Banco ${database.descricao}")
+                    echo lib.status('S', "Final do Deploy dos Objetos Planejados no Banco ${database.descricao}")
+                    lib.flushLog()
                 } // script
             } // steps
         } // stage 'Deploy'
@@ -429,30 +586,53 @@ pipeline {
         stage('Lista Inválidos') {
             steps {
                 script {
-                    if (!acao.listarInvalidos.executar) {
-                        echo lib.status('A', 'Listagem de objetos inválidos após o deploy está inativa no planejamento - nenhuma ação foi executada')
+                    if (!acao.listarInvalidos) {
+                        echo lib.linha('Blu', 'Listagem de objetos inválidos após o deploy está inativa no planejamento - nenhuma ação foi executada')
                         return
                     }
-                    echo lib.line('Lista Objetos Inválidos Após o Deploy')
-                    def script = acao.listarInvalidos.script
+                    echo lib.linha('Blu', 'Lista Objetos Inválidos Após o Deploy')
+                    def script
+                    def diretorio
                     def retorno
 
-                    echo lib.line("Verificando script: ${script}")
-
-                    if (!fileExists(file: script)) {
-                        error lib.status('E', "Script ${script} para listar objetos inválidos após o deploy não encontrado")
+                    // Modo dry-run
+                    if (modo_Dry_Run) {
+                        echo lib.status('A', 'Deploy rodando em modo Dry-Run! Nenhuma alteração será feita no banco de dados!')
                     }
 
-                    retorno = lib.runScript(script, database.conexao)
-                    echo lib.line("Retorno da execução:\n${retorno}")
+                    echo lib.linha('Blk', 'Verificando script')
 
-                    if (retorno.toUpperCase().contains('ERROR')) {
-                        error lib.status('E', 'Script que lista objetos inválidos após o deploy está com erro')
-                    } else if (!retorno.toUpperCase().contains('COMPLETED')) {
-                        error lib.status('E', 'Script que lista objetos inválidos após o deploy não executou')
+                    script = jsonConf.scripts.listInvalids.nome
+                    diretorio = jsonConf.scripts.listInvalids.diretorio
+
+                    disp = [
+                        lib.label('Blk', 'Script', script, 'T'),
+                        lib.label('Blk', 'Diretório', diretorio, 'T')
+                    ]
+                    echo lib.texto(disp)
+
+                    if (!fileExists(file: "${diretorio}/${script}")) {
+                        msg = "Script ${diretorio}/${script} para listar objetos inválidos após o deploy não encontrado"
+                        echo lib.status('E', msg)
+                        error msg
                     }
 
-                    echo lib.line('Final do Script que Lista os Objetos Inválidos Após o Deploy')
+                    retorno = lib.executaScript("${diretorio}/${script}", database.conexao, modo_Dry_Run)
+                    echo "Retorno da execução: ${retorno}"
+
+                    if (!modo_Dry_Run) {
+                        if (retorno.toUpperCase().contains('ERROR')) {
+                            msg = 'Script que lista objetos inválidos após o deploy está com erro'
+                            echo lib.status('E', msg)
+                            error msg
+                        } else if (!retorno.toUpperCase().contains('COMPLETED')) {
+                            msg = 'Script que lista objetos inválidos após o deploy não executou'
+                            echo lib.status('E', msg)
+                            error msg
+                        }
+                    }
+                    echo lib.status('S', 'Final do Script que Lista os Objetos Inválidos Após o Deploy')
+                    lib.flushLog()
                 } // script
             } // steps
         } // stage 'Lista Inválidos'
@@ -461,30 +641,53 @@ pipeline {
         stage('Recompila Objetos') {
             steps {
                 script {
-                    if (!acao.recompilarObjetos.executar) {
-                        echo lib.status('A', 'Recompilação de objetos após o deploy está inativa no planejamento - nenhuma ação foi executada')
+                    if (!acao.recompilarObjetos) {
+                        echo lib.linha('Blu', 'Recompilação de objetos após o deploy está inativa no planejamento - nenhuma ação foi executada')
                         return
                     }
-                    echo lib.line('Recompila Objetos Após o Deploy')
-                    def script = acao.recompilarObjetos.script
+                    echo lib.linha('Blu', 'Recompila Objetos Após o Deploy')
+                    def script
+                    def diretorio
                     def retorno
 
-                    echo lib.line("Verificando script: ${script}")
-
-                    if (!fileExists(file: script)) {
-                        error lib.status('E', "Script ${script} para recompilar objetos inválidos após o deploy não encontrado")
+                    // Modo dry-run
+                    if (modo_Dry_Run) {
+                        echo lib.status('A', 'Deploy rodando em modo Dry-Run! Nenhuma alteração será feita no banco de dados!')
                     }
 
-                    retorno = lib.runScript(script, database.conexao)
-                    echo lib.line("Retorno da execução:\n${retorno}")
+                    echo lib.linha('Blk', 'Verificando script')
 
-                    if (retorno.toUpperCase().contains('ERROR')) {
-                        error lib.status('E', 'Script que recompila objetos após o deploy está com erro')
-                    } else if (!retorno.toUpperCase().contains('COMPLETED')) {
-                        error lib.status('E', 'Script que recompila objetos após o deploy não executou')
+                    script = jsonConf.scripts.compileObjects.nome
+                    diretorio = jsonConf.scripts.compileObjects.diretorio
+
+                    disp = [
+                        lib.label('Blk', 'Script', script, 'T'),
+                        lib.label('Blk', 'Diretório', diretorio, 'T')
+                    ]
+                    echo lib.texto(disp)
+
+                    if (!fileExists(file: "${diretorio}/${script}")) {
+                        msg = "Script ${diretorio}/${script} para recompilar objetos inválidos após o deploy não encontrado"
+                        echo lib.status('E', msg)
+                        error msg
                     }
 
-                    echo lib.line('Final do Script que Recompila os Objetos Após o Deploy')
+                    retorno = lib.executaScript("${diretorio}/${script}", database.conexao, modo_Dry_Run)
+                    echo "Retorno da execução: ${retorno}"
+
+                    if (!modo_Dry_Run) {
+                        if (retorno.toUpperCase().contains('ERROR')) {
+                            msg = 'Script que recompila objetos após o deploy está com erro'
+                            echo lib.status('E', msg)
+                            error msg
+                        } else if (!retorno.toUpperCase().contains('COMPLETED')) {
+                            msg = 'Script que recompila objetos após o deploy não executou'
+                            echo lib.status('E', msg)
+                            error msg
+                        }
+                    }
+                    echo lib.status('S', 'Final do Script que Recompila os Objetos Após o Deploy')
+                    lib.flushLog()
                 } // script
             } // steps
         } // stage 'Recompila Objetos'
@@ -497,21 +700,10 @@ pipeline {
             script {
                 if (lib.log.create) {
                     lib.flushLog()
-                    lib.finishLog(
-                        action     : 'Deploy',
-                        tag        : Tag,
-                        buildNumber: env.BUILD_NUMBER
-                    )
-                    archiveArtifacts artifacts: lib.log.name, fingerprint: true, onlyIfSuccessful: false, allowEmptyArchive: true
+                    lib.finishLog()
+                    archiveArtifacts artifacts: lib.log.name, fingerprint: true, onlyIfSuccessful: false
                     echo lib.status('S', "Log ${lib.log.name} do deploy disponível nos artefatos do build")
-
-                    // Libera as referências do objeto global
-                    lib.log.name = null
-                    lib.log.handle = null
                 }
-
-                echo 'Limpando a Workspace após o deploy'
-                cleanWs() // Limpa resíduos de builds antigos
             } // script
         } // always
     } // post
