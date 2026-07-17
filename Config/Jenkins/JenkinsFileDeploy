@@ -128,18 +128,7 @@ pipeline {
                     // Inicializaz'a variável que determina a criação do log da biblioteca
                     lib.log.create = jsonConf.createLog
 
-
-
-
-
-
-
-
-
-
-
-
-                    /*try {
+                    try {
                         lib.createLog(
                             action     : 'deploy',
                             tag        : Tag,
@@ -148,26 +137,14 @@ pipeline {
                             jobName    : env.JOB_NAME,
                             workspace  : env.WORKSPACE
                         )
-                    */
+                    
                     //} catch (Throwable e) {
-                    /*} catch (Exception e) {
+                    } catch (Exception e) {
                         //echo "Erro: ${e.getMessage()}"
                         echo lib.status('A', "Arquivo de log não pode ser criado:\n${e.getMessage()}")
                         //echo lib.status('A', "Arquivo de log não pode ser criado:\n${e.toString()}")
                         lib.log.create = false
                     }
-                    */
-
-
-
-
-
-
-
-
-
-
-
 
                     // Carrega o indicativo da consistência do revert
                     consistRevert = jsonConf.consistRevert

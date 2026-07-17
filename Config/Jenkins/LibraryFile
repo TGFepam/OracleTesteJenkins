@@ -190,17 +190,9 @@ def getBuildStarter() {
 /*--------------------------------------------------
     Criação e inicializa o arquivo de log da execução
 --------------------------------------------------*/
-
-
-
-
-
-
-
-
-//@NonCPS
+@NonCPS
 //def createLog(String action, String tag, String buildNumber, String username, String jobName, String workspace) {
-/*def createLog(Map args) {
+def createLog(Map args) {
     // Verifica se deve criar o log
     if (!log.create) {
         return
@@ -248,7 +240,8 @@ def getBuildStarter() {
     // Limpa a variável de bloco após a escrita
     log.text.clear()
 }
-*/
+
+
 /*def createLog(String action, String tag, String buildNumber, String username, String jobName, String workspace) {
     // Verifica se deve criar o log
     if (!log.create) {
@@ -283,22 +276,6 @@ def getBuildStarter() {
     log.text.clear()
 }
 */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 /*--------------------------------------------------
