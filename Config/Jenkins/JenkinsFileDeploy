@@ -158,6 +158,11 @@ pipeline {
                     acao.recompilarObjetos.script = jsonConf.scripts.compileObjects
 
                     echo 'Início do Processo e Carga do Config Concluído'
+
+                    return
+
+
+
                 } // script
             } // steps
         } // stage 'Inicia Processo'

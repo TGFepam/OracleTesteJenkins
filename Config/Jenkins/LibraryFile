@@ -191,7 +191,6 @@ def getBuildStarter() {
     Criação e inicializa o arquivo de log da execução
 --------------------------------------------------*/
 @NonCPS
-//def createLog(String action, String tag, String buildNumber, String username, String jobName, String workspace) {
 def createLog(Map args) {
     // Verifica se deve criar o log
     if (!log.create) {
@@ -209,7 +208,7 @@ def createLog(Map args) {
 
     def timestamp = new Date().format('yyyyMMdd_HHmmss')
 
-    log.name = "log/${action}__${tag}__${timestamp}__${buildNumber}.log"
+    /*log.name = "log/${action}__${tag}__${timestamp}__${buildNumber}.log"
     log.handle = new File(log.name) // Inicializa o handle
     def path = log.handle.getParentFile()
 
@@ -239,10 +238,13 @@ def createLog(Map args) {
 
     // Limpa a variável de bloco após a escrita
     log.text.clear()
+*/
 }
 
 
-/*def createLog(String action, String tag, String buildNumber, String username, String jobName, String workspace) {
+
+/*@NonCPS
+*def createLog(String action, String tag, String buildNumber, String username, String jobName, String workspace) {
     // Verifica se deve criar o log
     if (!log.create) {
         return
