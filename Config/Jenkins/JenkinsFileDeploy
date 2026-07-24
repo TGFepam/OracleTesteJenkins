@@ -486,12 +486,14 @@ pipeline {
                     echo 'Finaliza o log e arquiva nos artefatos do build'
                     String status
 
-                    if(currentBuild.result == 'SUCCESS') {
+                    if (currentBuild.result == 'SUCCESS') {
                         status = 'sucesso'
-                    } else if(currentBuild.result == 'UNSTABLE') {
+                    } else if (currentBuild.result == 'UNSTABLE') {
                         status = 'alerta'
-                    } else {
+                    } else if (currentBuild.result == 'FAILURE') {
                         status = 'erro'
+                    } else {
+                        status = 'status indefinido'
                     }
 
                     // Verifica fisicamente se o arquivo foi criado no workspace
@@ -507,13 +509,13 @@ pipeline {
 
                         echo "Log ${lib.log.name} do deploy disponível nos artefatos do build"
                     } else {
-                        echo "Falha no arquivamento do log do deploy: O arquivo ${lib.log.name} não foi encontrado no Workspace")
+                        echo "Falha no arquivamento do log do deploy: O arquivo ${lib.log.name} não foi encontrado no Workspace"
                     }
                     // Limpa o nome do log após o arquivamento
                     lib.log.path = null
                     lib.log.name = null
                 } else {
-                    echo 'Arquivo de log do deploy não foi criado')
+                    echo 'Arquivo de log do deploy não foi criado'
                 }
                 echo 'Limpando a Workspace após o deploy'
                 cleanWs() // Limpa resíduos de builds antigos
