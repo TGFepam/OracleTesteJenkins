@@ -486,12 +486,14 @@ pipeline {
                     echo 'Finaliza o log e arquiva nos artefatos do build'
                     String status
 
-                    if(currentBuild.result == 'SUCCESS') {
+                    if (currentBuild.result == 'SUCCESS') {
                         status = 'sucesso'
-                    } else if(currentBuild.result == 'UNSTABLE') {
+                    } else if (currentBuild.result == 'UNSTABLE') {
                         status = 'alerta'
-                    } else {
+                    } else if (currentBuild.result == 'FAILURE') {
                         status = 'erro'
+                    } else {
+                        status = 'status indefinido'
                     }
 
                     // Verifica fisicamente se o arquivo foi criado no workspace
