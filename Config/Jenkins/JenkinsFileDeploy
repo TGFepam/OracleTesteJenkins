@@ -507,13 +507,13 @@ pipeline {
 
                         echo "Log ${lib.log.name} do deploy disponível nos artefatos do build"
                     } else {
-                        echo "Falha no arquivamento do log do deploy: O arquivo ${lib.log.name} não foi encontrado no Workspace")
+                        echo "Falha no arquivamento do log do deploy: O arquivo ${lib.log.name} não foi encontrado no Workspace"
                     }
                     // Limpa o nome do log após o arquivamento
                     lib.log.path = null
                     lib.log.name = null
                 } else {
-                    echo 'Arquivo de log do deploy não foi criado')
+                    echo 'Arquivo de log do deploy não foi criado'
                 }
                 echo 'Limpando a Workspace após o deploy'
                 cleanWs() // Limpa resíduos de builds antigos
