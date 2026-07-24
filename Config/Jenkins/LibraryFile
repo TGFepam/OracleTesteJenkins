@@ -46,7 +46,7 @@ Map parseJSON(String jsonFile, String description) {
     Execução de script no SQL*Plus
 --------------------------------------------------*/
 String runScript(String script, String connection, String objectType = '') {
-    // Lista dos objetos que terão o show errors
+    // Lista dos objetos que terão o "show errors"
     List<String> objetosDetalhar = [
         'function',
         'package',
