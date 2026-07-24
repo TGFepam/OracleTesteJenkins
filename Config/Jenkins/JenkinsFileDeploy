@@ -137,11 +137,8 @@ pipeline {
                             jobName    : env.JOB_NAME,
                             workspace  : env.WORKSPACE
                         )
-                    //} catch (Throwable e) {
                     } catch (Exception e) {
-                        //echo "Erro: ${e.getMessage()}"
                         echo lib.status('A', "Arquivo de log não pode ser criado:\n${e.getMessage()}")
-                        //echo lib.status('A', "Arquivo de log não pode ser criado:\n${e.toString()}")
                         lib.log.create = false
                     }
 
@@ -487,20 +484,36 @@ pipeline {
             script {
                 if (lib.log.create) {
                     echo 'Finaliza o log e arquiva nos artefatos do build'
+                    String status
 
-                    lib.flushLog()
-                    lib.finishLog(
-                        action     : 'Deploy',
-                        tag        : Tag,
-                        buildNumber: env.BUILD_NUMBER
-                    )
-                    archiveArtifacts artifacts: "${lib.log.path}/${lib.log.name}", fingerprint: true, onlyIfSuccessful: false, allowEmptyArchive: true
+                    if(currentBuild.result == 'SUCCESS') {
+                        status = 'sucesso'
+                    } else if(currentBuild.result == 'UNSTABLE') {
+                        status = 'alerta'
+                    } else {
+                        status = 'erro'
+                    }
 
-                    echo "[SUCESSO]: Log ${lib.log.name} do deploy disponível nos artefatos do build"
+                    // Verifica fisicamente se o arquivo foi criado no workspace
+                    if (fileExists("${lib.log.path}/${lib.log.name}")) {
+                        lib.flushLog()
+                        lib.finishLog(
+                            action     : 'Deploy',
+                            tag        : Tag,
+                            buildNumber: env.BUILD_NUMBER,
+                            status     : status
+                        )
+                        archiveArtifacts artifacts: "${lib.log.path}/${lib.log.name}", fingerprint: true, onlyIfSuccessful: false, allowEmptyArchive: true
 
+                        echo "Log ${lib.log.name} do deploy disponível nos artefatos do build"
+                    } else {
+                        echo "Falha no arquivamento do log do deploy: O arquivo ${lib.log.name} não foi encontrado no Workspace")
+                    }
                     // Limpa o nome do log após o arquivamento
                     lib.log.path = null
                     lib.log.name = null
+                } else {
+                    echo 'Arquivo de log do deploy não foi criado')
                 }
                 echo 'Limpando a Workspace após o deploy'
                 cleanWs() // Limpa resíduos de builds antigos

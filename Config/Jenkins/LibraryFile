@@ -139,15 +139,19 @@ String status(String status, String line) {
     switch (status.toUpperCase()[0]) {
         case 'S':
             message = "[SUCESSO]: ${line}"
+            status  = 'sucesso'
             break
         case 'A':
             message = "[ALERTA]: ${line}"
+            status  = 'alerta'
             break
         case 'E':
             message = "[ERRO]: ${line}"
+            status  = 'erro'
             break
         default:
             message = line
+            status  = 'sucesso'
             break
     }
 
@@ -237,7 +241,7 @@ void createLog(Map args) {
         "Build #  : ${buildNumber}",
         "Job Name : ${jobName}",
         "WorkSpace: ${workspace}",
-        "Data     : ${timestamp}",
+        "Timestamp: ${timestamp}",
         '------------------------------',
         '',
         ''
@@ -341,6 +345,7 @@ void finishLog(Map args) {
     String action      = args.action
     String tag         = args.tag
     String buildNumber = args.buildNumber
+    String status      = args.status
 
     String timestamp = new Date().format('yyyyMMdd_HHmmss')
 
@@ -349,10 +354,10 @@ void finishLog(Map args) {
         '',
         '',
         '------------------------------',
-        "${action} Terminado",
-        "Tag    : ${tag}",
-        "Build #: ${buildNumber}",
-        "Data   : ${timestamp}",
+        "${action} terminado com ${status}",
+        "Tag      : ${tag}",
+        "Build #  : ${buildNumber}",
+        "Timestamp: ${timestamp}",
         '------------------------------'
     ]
 
