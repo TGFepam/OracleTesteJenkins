@@ -5,8 +5,9 @@ import groovy.transform.Field
     Variável do log
 --------------------------------------------------*/
 @Field
-def log = [
+Map log = [
     create: true, // Indica a criação do arquivo
+    path  : null, // Caminho para o arquivo
     name  : null, // Nome do arquivo
     handle: null, // Handle do arquivo
     text  : [],   // Bloco para agrupar um texto para entrada única
@@ -17,13 +18,13 @@ def log = [
 /*--------------------------------------------------
     Processamento dos JSONs
 --------------------------------------------------*/
-def parseJSON(String jsonFile, String description) {
-    def text = [
+Map parseJSON(String jsonFile, String description) {
+    List<String> text = [
         "Arquivo JSON ${description}"
     ]
     if (fileExists(file: jsonFile)) {
         text << 'Arquivo encontrado'
-        def jsonParsed = readJSON file: jsonFile
+        Map jsonParsed = readJSON file: jsonFile
         if (jsonParsed) {
             text << 'Arquivo parseado'
             echo text.join('\n')
@@ -44,16 +45,17 @@ def parseJSON(String jsonFile, String description) {
 /*--------------------------------------------------
     Execução de script no SQL*Plus
 --------------------------------------------------*/
-def runScript(String script, String connection, String objectType = '') {
+String runScript(String script, String connection, String objectType = '') {
     // Lista dos objetos que terão o show errors
-    def objetosDetalhar = [
+    List<String> objetosDetalhar = [
         'function',
         'package',
         'procedure',
         'trigger'
     ]
-    def comando
-    def input
+    String comando
+    String input
+    String retorno
 
     if (!objectType) {
         comando = 'export LD_LIBRARY_PATH=/opt/oracle/instantclient_21_10\n' +
@@ -74,7 +76,7 @@ def runScript(String script, String connection, String objectType = '') {
     }
 
     try {
-        def retorno = sh(script: comando, returnStdout: true)
+        retorno = sh(script: comando, returnStdout: true)
     } catch (Exception e) {
         // Erro crítico na execução do comando: coloca na console e aborta
         echo status('E', "Falha rodando script no SQL*Plus:\n${e.getMessage()}")
@@ -88,7 +90,7 @@ def runScript(String script, String connection, String objectType = '') {
 /*--------------------------------------------------
     Inclui a linha da console no log
 --------------------------------------------------*/
-def line(String line) {
+String line(String line) {
     if (!line) {
         return
     }
@@ -100,7 +102,7 @@ def line(String line) {
 /*--------------------------------------------------
     Inclui a linha do texto (grupo) da console no log
 --------------------------------------------------*/
-def text(String line) {
+String text(String line) {
     if (!line) {
         return ''
     }
@@ -112,7 +114,7 @@ def text(String line) {
 /*--------------------------------------------------
     Adiciona o texto escrito na console no buffer do log
 --------------------------------------------------*/
-def writeText(List text) {
+String writeText(List text) {
     if (!text) {
         return
     }
@@ -124,7 +126,7 @@ def writeText(List text) {
 /*--------------------------------------------------
     Inclui o texto escrito na console com o identificador do status no buffer do log
 --------------------------------------------------*/
-def status(String status, String line) {
+String status(String status, String line) {
     /* Parâmetros:
         status -> 'S' para 'SUCESSO' / 'A' para 'ALERTA' / 'E' para 'ERRO'
         line   -> Texto da linha a ser colocado na console
@@ -132,7 +134,7 @@ def status(String status, String line) {
     if (!line) {
         return
     }
-    def message
+    String message
 
     switch (status.toUpperCase()[0]) {
         case 'S':
@@ -157,9 +159,9 @@ def status(String status, String line) {
 /*--------------------------------------------------
     Starter do build
 --------------------------------------------------*/
-def getBuildStarter() {
-    def causes = currentBuild.rawBuild.getCauses()
-    def result = []
+String getBuildStarter() {
+    List causes = currentBuild.rawBuild.getCauses()
+    List<String> result = []
 
     for (c in causes) {
         switch (true) {
@@ -191,39 +193,49 @@ def getBuildStarter() {
     Criação e inicializa o arquivo de log da execução
 --------------------------------------------------*/
 @NonCPS
-def createLog(Map args) {
+void createLog(Map args) {
     // Verifica se deve criar o log
     if (!log.create) {
         return
     }
     
     // Extrai os parâmetros nomeados do Map.
-    //def action      = args.action ?: 'deploy' // Para definir um valor padrão
-    def action      = args.action
-    def tag         = args.tag
-    def buildNumber = args.buildNumber
-    def username    = args.username
-    def jobName     = args.jobName
-    def workspace   = args.workspace
+    //String action      = args.action ?: 'deploy' // Para definir um valor padrão
+    String action      = args.action
+    String username    = args.username
+    String tag         = args.tag
+    String buildNumber = args.buildNumber
+    String jobName     = args.jobName
+    String workspace   = args.workspace
 
-    def timestamp = new Date().format('yyyyMMdd_HHmmss')
+    String timestamp = new Date().format('yyyyMMdd_HHmmss')
 
-    /*log.name = "log/${action}__${tag}__${timestamp}__${buildNumber}.log"
-    log.handle = new File(log.name) // Inicializa o handle
-    def path = log.handle.getParentFile()
+    // Diretório de criação do log
+    log.path = "log"
+    // Nome do arquivo do log
+    log.name = "${action}__${tag}__${timestamp}__${buildNumber}.log"
+    // Inicializa o handle com o diretório absoluto do workspace e o nome do arquivo
+    log.handle = new File("${workspace}/${log.path}/${log.name}")
+    // Obtém o diretório pai do handle
+    File path = log.handle.getParentFile()
+    //java.io.File path = log.handle.getParentFile()
 
     // Cria diretório se não existir
     if (!path.isDirectory()) {
-        path.mkdirs()
+        boolean created = path.mkdirs()
+        // Testa o retorno da criação do diretório
+        if (!created) {
+            throw new Exception("Falha ao criar o diretório do log: ${path.absolutePath}")
+        }
     }
 
     // Prepara o cabeçalho
     log.text = [
         '------------------------------',
         "Username : ${username}",
-        "Job Name : ${jobName}",
         "Tag      : ${tag}",
         "Build #  : ${buildNumber}",
+        "Job Name : ${jobName}",
         "WorkSpace: ${workspace}",
         "Data     : ${timestamp}",
         '------------------------------',
@@ -238,52 +250,13 @@ def createLog(Map args) {
 
     // Limpa a variável de bloco após a escrita
     log.text.clear()
-*/
 }
-
-
-
-/*@NonCPS
-*def createLog(String action, String tag, String buildNumber, String username, String jobName, String workspace) {
-    // Verifica se deve criar o log
-    if (!log.create) {
-        return
-    }
-
-    def timestamp = new Date().format('yyyyMMdd_HHmmss')
-
-    // Cria o diretório para o log
-    sh 'mkdir -p log'
-
-    log.name = "log/${action}__${tag}__${timestamp}__${buildNumber}.log"
-
-    // Prepara o cabeçalho
-    log.text = [
-        '------------------------------',
-        "Username : ${username}",
-        "Job Name : ${jobName}",
-        "Tag      : ${tag}",
-        "Build #  : ${buildNumber}",
-        "WorkSpace: ${workspace}",
-        "Data     : ${timestamp}",
-        '------------------------------',
-        '',
-        ''
-    ]
-
-    // Cria o arquivo e grava o cabeçalho
-    writeFile file: log.name, text: log.text.join('\n'), encoding: 'UTF-8'
-
-    // Limpa a variável de bloco após a escrita
-    log.text.clear()
-}
-*/
 
 
 /*--------------------------------------------------
     Adição de uma linha única ao buffer do log
 --------------------------------------------------*/
-def addLogLine(String line) {
+void addLogLine(String line) {
     if (!log.create ||
         !log.handle ||
         !line) {
@@ -291,7 +264,7 @@ def addLogLine(String line) {
     }
 
     // Adiciona a linha ao buffer
-    def now = new Date().format('HH:mm:ss')
+    String now = new Date().format('HH:mm:ss')
     log.buffer << "[${now}] ${line}"
 }
 
@@ -299,7 +272,7 @@ def addLogLine(String line) {
 /*--------------------------------------------------
     Inclusão de uma linha ao bloco de texto do log
 --------------------------------------------------*/
-def addLogTextLine(String line) {
+void addLogTextLine(String line) {
     if (!log.create ||
         !log.handle ||
         !line) {
@@ -314,14 +287,14 @@ def addLogTextLine(String line) {
 /*--------------------------------------------------
     Flush do bloco de texto ao buffer do log
 --------------------------------------------------*/
-def flushLogText() {
+void flushLogText() {
     if (!log.create ||
         !log.handle) {
         return
     }
 
     // Adiciona o bloco de texto ao buffer
-    def now = new Date().format('HH:mm:ss')
+    String now = new Date().format('HH:mm:ss')
     log.buffer << "[${now}]"
     log.text.each { line ->
         log.buffer << line
@@ -336,7 +309,7 @@ def flushLogText() {
     Grava o conteúdo do buffer no arquivo de log e limpa o buffer
 --------------------------------------------------*/
 @NonCPS
-def flushLog() {
+void flushLog() {
     if (!log.create ||
         !log.handle ||
         !log.buffer) {
@@ -357,7 +330,7 @@ def flushLog() {
     Encerramento do arquivo de log
 --------------------------------------------------*/
 @NonCPS
-def finishLog(Map args) {
+void finishLog(Map args) {
     if (!log.create ||
         !log.handle) {
         return
@@ -365,11 +338,11 @@ def finishLog(Map args) {
 
     // Extrai os parâmetros nomeados do Map.
     //def action      = args.action ?: 'deploy' // Para definir um valor padrão
-    def action      = args.action
-    def tag         = args.tag
-    def buildNumber = args.buildNumber
+    String action      = args.action
+    String tag         = args.tag
+    String buildNumber = args.buildNumber
 
-    def timestamp = new Date().format('yyyyMMdd_HHmmss')
+    String timestamp = new Date().format('yyyyMMdd_HHmmss')
 
     // Prepara a finalização
     log.text = [
@@ -388,8 +361,10 @@ def finishLog(Map args) {
         writer.writeLine(log.text.join('\n')) // Adiciona a finalização
     }
 
-    // Limpa o texto após a finalização
+    // Limpa as variáveis após a finalização
+    log.handle = null
     log.text.clear()
+    log.buffer.clear()
 }
 
 

@@ -2,15 +2,15 @@
 def lib
 
 // Variáveis para os objetos JSON
-def jsonConf // Parâmetros de configuração
-def jsonData // Informações dos bancos de dados
-def jsonPlan // Planejamento do deploy
-def jsonRevt // Planejamento do revert
+Map jsonConf // Parâmetros de configuração
+Map jsonData // Informações dos bancos de dados
+Map jsonPlan // Planejamento do deploy
+Map jsonRevt // Planejamento do revert
 
-def consistRevert = false
+boolean consistRevert = false
 
 // Variável para os dados do database
-def database = [
+Map database = [
     descricao  : '',
     enderecoIP : '',
     porta      : '',
@@ -19,14 +19,14 @@ def database = [
 ]
 
 // Variável com as ações configuradas no planejamento
-/*def acao = [
+/*Map acao = [
     matarSessoes     : false,
     listarInvalidos  : false,
     recompilarObjetos: false
 ]
 */
 
-def acao = [
+Map acao = [
     matarSessoes     : [
         executar: false,
         script  : ''
@@ -42,10 +42,10 @@ def acao = [
 ]
 
 // Variável para armazenar o diretório raiz do repositório
-def diretorioRaiz = ''
+String diretorioRaiz = ''
 
 // Variável para display de texto em bloco
-def texto = []
+List<String> texto = []
 
 
 pipeline {
@@ -56,7 +56,7 @@ pipeline {
     }
 
     options {
-        // Altera o funcionamento default e não faz o checkout do SCM no início do job
+        // Altera o funcionamento default e não faz o checkout do SCM no início do build
         skipDefaultCheckout(true)
     }
 
@@ -110,7 +110,7 @@ pipeline {
                     }
 
                     // Nome do arquivo de config
-                    def confFile = 'Config/Jenkins/ConfigParam.json'
+                    String confFile = 'Config/Jenkins/ConfigParam.json'
                     echo "Processa arquivo JSON de parâmetros de configuração: ${confFile}"
 
                     // Verifica se o arquivo JSON existe, se está válido e com dados
@@ -131,13 +131,12 @@ pipeline {
                     try {
                         lib.createLog(
                             action     : 'deploy',
+                            username   : lib.getBuildStarter(),
                             tag        : Tag,
                             buildNumber: env.BUILD_NUMBER,
-                            username   : lib.getBuildStarter(),
                             jobName    : env.JOB_NAME,
                             workspace  : env.WORKSPACE
                         )
-                    
                     //} catch (Throwable e) {
                     } catch (Exception e) {
                         //echo "Erro: ${e.getMessage()}"
@@ -158,11 +157,6 @@ pipeline {
                     acao.recompilarObjetos.script = jsonConf.scripts.compileObjects
 
                     echo 'Início do Processo e Carga do Config Concluído'
-
-                    return
-
-
-
                 } // script
             } // steps
         } // stage 'Inicia Processo'
@@ -174,9 +168,9 @@ pipeline {
                     echo lib.line('Início da Carga dos Arquivos JSON de Configuração e Planejamento')
 
                     // Nome dos arquivos
-                    def dataFile = 'Config/Jenkins/DatabaseParam.json'
-                    def planFile = "Config/Plannings/Planning_Deploy.json"
-                    def revtFile = "Config/Plannings/Planning_Revert.json"
+                    String dataFile = 'Config/Jenkins/DatabaseParam.json'
+                    String planFile = "Config/Plannings/Planning_Deploy.json"
+                    String revtFile = "Config/Plannings/Planning_Revert.json"
 
                     texto = [
                         lib.text('Arquivos JSON'),
@@ -215,9 +209,8 @@ pipeline {
             steps {
                 script {
                     echo lib.line('Início do Processamento dos Parâmetros do Planejamento Para Deploy')
-                    def nomeDB
-                    def dbConfig
-                    def usuario
+                    String nomeDB
+                    String usuario
 
                     // Valida a Tag selecionada com a Tag do planejamento
                     if (jsonPlan.tag != Tag) {
@@ -247,8 +240,8 @@ pipeline {
                         lib.text(''),
                         lib.text('Dados do Build'),
                         lib.text("Username: ${lib.getBuildStarter()}"),
-                        lib.text("Job Name: ${env.JOB_NAME}"),
                         lib.text("Build #: ${env.BUILD_NUMBER}"),
+                        lib.text("Job Name: ${env.JOB_NAME}"),
                         lib.text("Workspace: ${env.WORKSPACE}")
                     ]
                     echo lib.writeText(texto)
@@ -317,8 +310,8 @@ pipeline {
             steps {
                 script {
                     echo lib.line('Início da Validação dos Objetos Planejados Para Deploy')
-                    def comando
-                    def retorno
+                    String comando
+                    String retorno
 
                     jsonPlan.objetos.each { obj ->
                         lib.line("Verifica a existência do arquivo: ${diretorioRaiz}/${obj.nome}")
@@ -356,8 +349,8 @@ pipeline {
                         return
                     }
                     echo lib.status('A', 'Mata as Sessões do Banco de Dados Antes do Deploy')
-                    def script = acao.matarSessoes.script
-                    def retorno
+                    String script = acao.matarSessoes.script
+                    String retorno
 
                     echo lib.line("Verificando Script: ${script}")
 
@@ -384,8 +377,8 @@ pipeline {
             steps {
                 script {
                     echo lib.line("Início do Deploy dos Objetos Planejados no Banco ${database.descricao}")
-                    def tipoObjeto
-                    def retorno
+                    String tipoObjeto
+                    String retorno
 
                     jsonPlan.objetos.each { obj ->
                         tipoObjeto = obj.nome.split('/')[0][0..-2].toLowerCase()
@@ -431,8 +424,8 @@ pipeline {
                         return
                     }
                     echo lib.line('Lista Objetos Inválidos Após o Deploy')
-                    def script = acao.listarInvalidos.script
-                    def retorno
+                    String script = acao.listarInvalidos.script
+                    String retorno
 
                     echo lib.line("Verificando script: ${script}")
 
@@ -463,8 +456,8 @@ pipeline {
                         return
                     }
                     echo lib.line('Recompila Objetos Após o Deploy')
-                    def script = acao.recompilarObjetos.script
-                    def retorno
+                    String script = acao.recompilarObjetos.script
+                    String retorno
 
                     echo lib.line("Verificando script: ${script}")
 
@@ -492,22 +485,23 @@ pipeline {
     post {
         always {
             script {
-                /*if (lib.log.create) {
+                if (lib.log.create) {
+                    echo 'Finaliza o log e arquiva nos artefatos do build'
+
                     lib.flushLog()
                     lib.finishLog(
                         action     : 'Deploy',
                         tag        : Tag,
                         buildNumber: env.BUILD_NUMBER
                     )
-                    archiveArtifacts artifacts: lib.log.name, fingerprint: true, onlyIfSuccessful: false, allowEmptyArchive: true
-                    echo lib.status('S', "Log ${lib.log.name} do deploy disponível nos artefatos do build")
+                    archiveArtifacts artifacts: "${lib.log.path}/${lib.log.name}", fingerprint: true, onlyIfSuccessful: false, allowEmptyArchive: true
 
-                    // Libera as referências do objeto global
+                    echo "[SUCESSO]: Log ${lib.log.name} do deploy disponível nos artefatos do build"
+
+                    // Limpa o nome do log após o arquivamento
+                    lib.log.path = null
                     lib.log.name = null
-                    lib.log.handle = null
                 }
-                */
-
                 echo 'Limpando a Workspace após o deploy'
                 cleanWs() // Limpa resíduos de builds antigos
             } // script
