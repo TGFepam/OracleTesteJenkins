@@ -1,8 +1,8 @@
 {
     "autor": "Tiago Gabriel",
-    "data": "2026-07-16",
+    "data": "2026-07-24",
     "descricao": "Teste do Jenkins",
-    "tag": "v2026.07.16.01",
+    "tag": "v2026.07.24.01",
     "acoes": {
         "matarSessoes": false,
         "listarInvalidos": true,
