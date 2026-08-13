@@ -1,4 +1,5 @@
 import groovy.transform.Field
+import groovy.json.JsonOutput
 
 
 /*--------------------------------------------------
@@ -100,7 +101,12 @@ void scriptValidator(String script) {
         text << "Status: ${httpResponse.status}"
         if (httpResponse.content != null) {
             text << ''
-            text << "Response: ${httpResponse.content}"
+            try {
+                text << 'Response:'
+                text << JsonOutput.prettyPrint(httpResponse.content)
+            } catch (Exception ignored) {
+                text << "Response: ${httpResponse.content}"
+            }
         }
         text << ''
         text << 'API retornou com sucesso'
@@ -109,7 +115,12 @@ void scriptValidator(String script) {
         text << 'Erro na validação do script'
         text << "Status: ${httpResponse.status}"
         text << ''
-        text << "Response: ${httpResponse.content}"
+        try {
+            text << 'Response:'
+            text << JsonOutput.prettyPrint(httpResponse.content)
+        } catch (Exception ignored) {
+            text << "Response: ${httpResponse.content}"
+        }
         text << ''
         text << "API retornou com erro"
         text << "Script com caracteres inválidos"
