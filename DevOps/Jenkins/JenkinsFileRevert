@@ -6,9 +6,6 @@ Map jsonConf // Parâmetros de configuração
 Map jsonData // Informações dos bancos de dados
 Map jsonPlan // Planejamento do revert
 
-// Nome do service name do database para cada parâmetro
-String dbServiceName
-
 // Variável para os dados do database
 Map database = [
     descricao  : '',
@@ -122,12 +119,9 @@ pipeline {
                         lib.log.create = false
                     }
 
-                    // Inicializa o service name do database
-                    dbServiceName = jsonConf.dbServiceName[Database.trim().toLowerCase()]
-
-                    if (!dbServiceName) {
-                        echo lib.status('A', "Arquivo de log do revert não pode ser criado: service name do database ${Database} não encontrado nas configurações")
-                        lib.log.create = false
+                    // Verifica se o parâmetro Database foi selecionado
+                    if (Database == 'none' || Database.trim().isEmpty()) {
+                        error 'Banco de dados de destino para o revert não selecionado!'
                     }
 
                     if (lib.log.create) {
@@ -135,7 +129,7 @@ pipeline {
                         try {
                             lib.createLog(
                                 action     : 'revert',
-                                database   : dbServiceName,
+                                database   : Database,
                                 username   : lib.getBuildStarter(),
                                 tag        : Tag,
                                 buildNumber: env.BUILD_NUMBER,
@@ -223,7 +217,7 @@ pipeline {
                     echo lib.writeText(texto)
 
                     // Mensagem de alerta para database de produção
-                    if (Database == 'prod') {
+                    if (Database == 'fprod') {
                         texto = [
                             lib.text(''),
                             lib.text('------------------------------'),
@@ -307,7 +301,8 @@ pipeline {
                             error lib.status('E', "Script ${diretorioRaiz}/${obj.nome} programado para revert não está em US-ASCII UTF-8")
                         }
 
-                        if (jsonConf.validateScript) {
+                        //if (jsonConf.validateScript) {
+                        if (jsonConf.validateScript[Database]) {
                             lib.line('Verifica caracteres inválidos no script')
 
                             lib.scriptValidator("${diretorioRaiz}/${obj.nome}")
@@ -505,7 +500,7 @@ pipeline {
                         lib.flushLog()
                         lib.finishLog(
                             action     : 'Revert',
-                            database   : dbServiceName,
+                            database   : Database,
                             tag        : Tag,
                             buildNumber: env.BUILD_NUMBER,
                             status     : status

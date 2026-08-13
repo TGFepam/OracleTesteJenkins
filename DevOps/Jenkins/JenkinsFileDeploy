@@ -7,9 +7,6 @@ Map jsonData // Informações dos bancos de dados
 Map jsonPlan // Planejamento do deploy
 Map jsonRevt // Planejamento do revert
 
-// Nome do service name do database para cada parâmetro
-String dbServiceName
-
 // Indica a consistência do plano de revert
 boolean consistRevert = false
 
@@ -126,12 +123,9 @@ pipeline {
                         lib.log.create = false
                     }
 
-                    // Inicializa o service name do database
-                    dbServiceName = jsonConf.dbServiceName[Database.trim().toLowerCase()]
-
-                    if (!dbServiceName) {
-                        echo lib.status('A', "Arquivo de log do deploy não pode ser criado: service name do database ${Database} não encontrado nas configurações")
-                        lib.log.create = false
+                    // Verifica se o parâmetro Database foi selecionado
+                    if (Database == 'none' || Database.trim().isEmpty()) {
+                        error 'Banco de dados de destino para o deploy não selecionado!'
                     }
 
                     if (lib.log.create) {
@@ -139,7 +133,7 @@ pipeline {
                         try {
                             lib.createLog(
                                 action     : 'deploy',
-                                database   : dbServiceName,
+                                database   : Database,
                                 username   : lib.getBuildStarter(),
                                 tag        : Tag,
                                 buildNumber: env.BUILD_NUMBER,
@@ -246,7 +240,7 @@ pipeline {
                     echo lib.writeText(texto)
 
                     // Mensagem de alerta para database de produção
-                    if (Database == 'prod') {
+                    if (Database == 'fprod') {
                         texto = [
                             lib.text(''),
                             lib.text('------------------------------'),
@@ -330,7 +324,8 @@ pipeline {
                             error lib.status('E', "Script ${diretorioRaiz}/${obj.nome} programado para deploy não está em US-ASCII ou UTF-8")
                         }
 
-                        if (jsonConf.validateScript) {
+                        //if (jsonConf.validateScript) {
+                        if (jsonConf.validateScript[Database]) {
                             lib.line('Verifica caracteres inválidos no script')
 
                             lib.scriptValidator("${diretorioRaiz}/${obj.nome}")
@@ -528,7 +523,7 @@ pipeline {
                         lib.flushLog()
                         lib.finishLog(
                             action     : 'Deploy',
-                            database   : dbServiceName,
+                            database   : Database,
                             tag        : Tag,
                             buildNumber: env.BUILD_NUMBER,
                             status     : status

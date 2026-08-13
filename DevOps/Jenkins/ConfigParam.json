@@ -1,11 +1,9 @@
 {
     "createLog": true,
     "consistRevert": true,
-    "validateScript": true,
-    "dbServiceName": {
-        "homolog": "homologa",
-        "forms12c": "hmlforms",
-        "prod": "fprod"
+    "validateScript": {
+        "homologa": true,
+        "fprod": true
     },
     "rootDirectories": {
         "deploy": "Deploy",

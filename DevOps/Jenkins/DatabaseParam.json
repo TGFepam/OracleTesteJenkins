@@ -1,23 +1,23 @@
 {
-    "prod": {
+    "fprod": {
         "descricao": "Produção",
         "enderecoIP": "10.92.2.66",
         "porta": "1521",
         "serviceName": "fprod"
     },
-    "homolog": {
+    "homologa": {
         "descricao": "Homologação",
         "enderecoIP": "10.92.2.65",
         "porta": "1521",
         "serviceName": "homologa"
     },
-    "desenv": {
+    "fepdev": {
         "descricao": "Desenvolvimento",
         "enderecoIP": "10.92.2.65",
         "porta": "1521",
         "serviceName": "fepdev"
     },
-    "forms12c": {
+    "hmlforms": {
         "descricao": "Forms 12c",
         "enderecoIP": "10.92.2.65",
         "porta": "1521",
