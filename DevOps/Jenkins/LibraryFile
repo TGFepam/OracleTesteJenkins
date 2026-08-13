@@ -70,7 +70,7 @@ Map parseJSON(String jsonFile, String description) {
 /*--------------------------------------------------
     Verificação de caracteres inválidos no script
 --------------------------------------------------*/
-void scriptValidator(String script) {
+void scriptValidator(String script, ) {
     List<String> text = []
     def httpResponse
     String situacao
