@@ -16,6 +16,30 @@ Map log = [
 
 
 /*--------------------------------------------------
+    Variável dos tipos de objeto com check de erros
+--------------------------------------------------*/
+@Field
+List<String> checkErrors = [
+    'function',
+    'package',
+    'procedure',
+    'trigger'
+]
+
+
+/*--------------------------------------------------
+    Variável da validação de código pela API
+--------------------------------------------------*/
+@Field
+Map response = [
+    error   : false,
+    message : '',
+    status  : 0,
+    text    : []
+]
+
+
+/*--------------------------------------------------
     Processamento dos JSONs
 --------------------------------------------------*/
 Map parseJSON(String jsonFile, String description) {
@@ -43,16 +67,64 @@ Map parseJSON(String jsonFile, String description) {
 
 
 /*--------------------------------------------------
+    Verificação de caracteres inválidos no script
+--------------------------------------------------*/
+void scriptValidator(String script) {
+    List<String> text = []
+    def httpResponse
+
+    try {
+        httpResponse = httpRequest url: 'http://devops.semars.intra.rs.gov.br/validatorscriptsql/ValidatorFile',
+                                    httpMode: 'POST',
+                                    quiet: true,
+                                    acceptType: 'APPLICATION_JSON',
+                                    multipartName: 'file',
+                                    uploadFile: script,
+                                    validResponseCodes: '100:599',
+                                    consoleLogResponseBody: true,
+                                    timeout: 20
+
+    } catch (Exception e) {
+        response.error   = true
+        response.message = e.getMessage()
+        response.status  = 0
+        response.text    = []
+        return
+    }
+
+    response.error   = false
+    response.message = ''
+
+    if (httpResponse.status == 200) {
+        text << 'Sucesso na validação do script'
+        text << "Status: ${httpResponse.status}"
+        if (httpResponse.content != null) {
+            text << ''
+            text << "Response: ${httpResponse.content}"
+        }
+        text << ''
+        text << 'API retornou com sucesso'
+        text << 'Script sem caracteres inválidos'
+    } else {
+        text << 'Erro na validação do script'
+        text << "Status: ${httpResponse.status}"
+        text << ''
+        text << "Response: ${httpResponse.content}"
+        text << ''
+        text << "API retornou com erro"
+        text << "Script com caracteres inválidos"
+    }
+
+    response.status = httpResponse.status
+    response.text   = text
+}
+
+
+/*--------------------------------------------------
     Execução de script no SQL*Plus
 --------------------------------------------------*/
 String runScript(String script, String connection, String objectType = '') {
     // Lista dos objetos que terão o "show errors"
-    List<String> objetosDetalhar = [
-        'function',
-        'package',
-        'procedure',
-        'trigger'
-    ]
     String comando
     String input
     String retorno
@@ -63,8 +135,8 @@ String runScript(String script, String connection, String objectType = '') {
                   'export NLS_LANG=AMERICAN_AMERICA.WE8ISO8859P1\n' +
                   """echo "@${script}" | sqlplus "${connection}";\n"""
     } else {
-        // Se o tipo do objeto estiver na lista, depois do script roda o show errors
-        if (objectType in objetosDetalhar) {
+        // Se o tipo do objeto estiver na lista, depois do script roda o "show errors"
+        if (objectType in checkErrors) {
             input = '(echo "@' + script + '"; echo "show errors")'
         } else {
             input = 'echo "@' + script + '"'
@@ -139,19 +211,15 @@ String status(String status, String line) {
     switch (status.toUpperCase()[0]) {
         case 'S':
             message = "[SUCESSO]: ${line}"
-            status  = 'sucesso'
             break
         case 'A':
             message = "[ALERTA]: ${line}"
-            status  = 'alerta'
             break
         case 'E':
             message = "[ERRO]: ${line}"
-            status  = 'erro'
             break
         default:
             message = line
-            status  = 'sucesso'
             break
     }
 
@@ -206,6 +274,7 @@ void createLog(Map args) {
     // Extrai os parâmetros nomeados do Map.
     //String action      = args.action ?: 'deploy' // Para definir um valor padrão
     String action      = args.action
+    String database    = args.database
     String username    = args.username
     String tag         = args.tag
     String buildNumber = args.buildNumber
@@ -217,7 +286,7 @@ void createLog(Map args) {
     // Diretório de criação do log
     log.path = "log"
     // Nome do arquivo do log
-    log.name = "${action}__${tag}__${timestamp}__${buildNumber}.log"
+    log.name = "${action}__${tag}__${database}__${timestamp}__${buildNumber}.log"
     // Inicializa o handle com o diretório absoluto do workspace e o nome do arquivo
     log.handle = new File("${workspace}/${log.path}/${log.name}")
     // Obtém o diretório pai do handle
@@ -238,6 +307,7 @@ void createLog(Map args) {
         '------------------------------',
         "Username : ${username}",
         "Tag      : ${tag}",
+        "Database : ${database}",
         "Build #  : ${buildNumber}",
         "Job Name : ${jobName}",
         "WorkSpace: ${workspace}",
@@ -341,8 +411,9 @@ void finishLog(Map args) {
     }
 
     // Extrai os parâmetros nomeados do Map.
-    //def action      = args.action ?: 'deploy' // Para definir um valor padrão
+    //def action         = args.action ?: 'deploy' // Para definir um valor padrão
     String action      = args.action
+    String database    = args.database
     String tag         = args.tag
     String buildNumber = args.buildNumber
     String status      = args.status
@@ -355,6 +426,7 @@ void finishLog(Map args) {
         '',
         '------------------------------',
         "${action} terminado com ${status}",
+        "Database : ${database}",
         "Tag      : ${tag}",
         "Build #  : ${buildNumber}",
         "Timestamp: ${timestamp}",

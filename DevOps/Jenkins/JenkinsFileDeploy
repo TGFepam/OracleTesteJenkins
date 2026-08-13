@@ -7,6 +7,10 @@ Map jsonData // Informações dos bancos de dados
 Map jsonPlan // Planejamento do deploy
 Map jsonRevt // Planejamento do revert
 
+// Nome do service name do database para cada parâmetro
+String dbServiceName
+
+// Indica a consistência do plano de revert
 boolean consistRevert = false
 
 // Variável para os dados do database
@@ -17,14 +21,6 @@ Map database = [
     serviceName: '',
     conexao    : ''
 ]
-
-// Variável com as ações configuradas no planejamento
-/*Map acao = [
-    matarSessoes     : false,
-    listarInvalidos  : false,
-    recompilarObjetos: false
-]
-*/
 
 Map acao = [
     matarSessoes     : [
@@ -58,6 +54,8 @@ pipeline {
     options {
         // Altera o funcionamento default e não faz o checkout do SCM no início do build
         skipDefaultCheckout(true)
+        // Descarta os logs de builds deixando os últimos 20
+        buildDiscarder(logRotator(numToKeepStr: '20'))
     }
 
     stages {
@@ -78,7 +76,7 @@ pipeline {
                     echo 'Realizando Checkout do Repositório'
 
                     // Verifica se o parâmetro Tag foi selecionado
-                    if (Tag == 'None') {
+                    if (Tag == 'None' || Tag.trim().isEmpty()) {
                         error 'É necessário selecionar uma Tag para o checkout do repositório e deploy!'
                     }
 
@@ -98,62 +96,66 @@ pipeline {
         stage('Inicia Processo') {
             steps {
                 script {
-                    echo 'Início do Processo e Carga do Config'
+                    echo 'Início do Processo e Carga das Configurações'
 
                     echo 'Carrega a biblioteca'
                     try {
-                        lib = load 'Config/Jenkins/LibraryFile'
+                        lib = load 'DevOps/Jenkins/LibraryFile'
                     } catch (Exception e) {
                         // Erro crítico: coloca na console e aborta
-                        echo "Falha carregando a biblioteca (Config/Jenkins/LibraryFile):\n${e.getMessage()}"
+                        echo "Falha carregando a biblioteca (DevOps/Jenkins/LibraryFile):\n${e.getMessage()}"
                         error "Falha carregando a biblioteca"
                     }
 
                     // Nome do arquivo de config
-                    String confFile = 'Config/Jenkins/ConfigParam.json'
+                    String confFile = 'DevOps/Jenkins/ConfigParam.json'
                     echo "Processa arquivo JSON de parâmetros de configuração: ${confFile}"
 
                     // Verifica se o arquivo JSON existe, se está válido e com dados
                     try {
                         jsonConf = lib.parseJSON(confFile, 'dos parâmetros de configuração')
-
-                    //} catch (hudson.AbortException e) {
-                    //    throw e
                     } catch (Exception e) {
-                        //echo "Erro: ${e.getMessage()}"
                         echo lib.status('E', "Arquivo JSON de configuração não pode ser carregado:\n${e.getMessage()}")
                         error lib.status('E', 'Falha lendo/parseando arquivos JSON de configuração')
                     }
 
-                    // Inicializaz'a variável que determina a criação do log da biblioteca
+                    // Inicializa a variável que determina a criação do log da biblioteca
                     lib.log.create = jsonConf.createLog
 
-                    try {
-                        lib.createLog(
-                            action     : 'deploy',
-                            username   : lib.getBuildStarter(),
-                            tag        : Tag,
-                            buildNumber: env.BUILD_NUMBER,
-                            jobName    : env.JOB_NAME,
-                            workspace  : env.WORKSPACE
-                        )
-                    } catch (Exception e) {
-                        echo lib.status('A', "Arquivo de log não pode ser criado:\n${e.getMessage()}")
+                    if (!lib.log.create) {
                         lib.log.create = false
+                    }
+
+                    // Inicializa o service name do database
+                    dbServiceName = jsonConf.dbServiceName[Database.trim().toLowerCase()]
+
+                    if (!dbServiceName) {
+                        echo lib.status('A', "Arquivo de log do deploy não pode ser criado: service name do database ${Database} não encontrado nas configurações")
+                        lib.log.create = false
+                    }
+
+                    if (lib.log.create) {
+                        echo 'Cria arquivo de log do deploy'
+                        try {
+                            lib.createLog(
+                                action     : 'deploy',
+                                database   : dbServiceName,
+                                username   : lib.getBuildStarter(),
+                                tag        : Tag,
+                                buildNumber: env.BUILD_NUMBER,
+                                jobName    : env.JOB_NAME,
+                                workspace  : env.WORKSPACE
+                            )
+                        } catch (Exception e) {
+                            echo lib.status('A', "Arquivo de log do deploy não pode ser criado:\n${e.getMessage()}")
+                            lib.log.create = false
+                        }
                     }
 
                     // Carrega o indicativo da consistência do revert
                     consistRevert = jsonConf.consistRevert
 
-                    // Variável para armazenar o diretório raiz do repositório
-                    diretorioRaiz = jsonConf.rootDirectories.deploy
-
-                    // Inicializa o nome dos scripts das ações
-                    acao.matarSessoes.script      = jsonConf.scripts.killSessions
-                    acao.listarInvalidos.script   = jsonConf.scripts.listInvalids
-                    acao.recompilarObjetos.script = jsonConf.scripts.compileObjects
-
-                    echo 'Início do Processo e Carga do Config Concluído'
+                    echo 'Início do Processo e Carga das Configurações Concluídos'
                 } // script
             } // steps
         } // stage 'Inicia Processo'
@@ -162,12 +164,12 @@ pipeline {
         stage('Carrega JSONs') {
             steps {
                 script {
-                    echo lib.line('Início da Carga dos Arquivos JSON de Configuração e Planejamento')
+                    echo lib.line('Início da Carga dos Arquivos JSON do Banco de Dados e Planejamento')
 
                     // Nome dos arquivos
-                    String dataFile = 'Config/Jenkins/DatabaseParam.json'
-                    String planFile = "Config/Plannings/Planning_Deploy.json"
-                    String revtFile = "Config/Plannings/Planning_Revert.json"
+                    String dataFile = 'DevOps/Jenkins/DatabaseParam.json'
+                    String planFile = "DevOps/Plannings/Planning_Deploy.json"
+                    String revtFile = "DevOps/Plannings/Planning_Revert.json"
 
                     texto = [
                         lib.text('Arquivos JSON'),
@@ -188,15 +190,11 @@ pipeline {
                         if (consistRevert) {
                             jsonRevt = lib.parseJSON(revtFile, 'do planejamento para o revert')
                         }
-
-                    //} catch (hudson.AbortException e) {
-                    //    throw e
                     } catch (Exception e) {
-                        //echo "Erro: ${e.getMessage()}"
                         echo lib.status('E', "Não foi possível ler/parsear os arquivos JSON:\n${e.getMessage()}")
                         error 'Falha lendo/parseando arquivos JSON'
                     }
-                    echo lib.line('Final da Carga dos Arquivos JSON de Configuração e Planejamento')
+                    echo lib.line('Final da Carga dos Arquivos JSON do Banco de Dados e Planejamento')
                 } // script
             } // steps
         } // stage 'Carrega JSONs'
@@ -206,7 +204,6 @@ pipeline {
             steps {
                 script {
                     echo lib.line('Início do Processamento dos Parâmetros do Planejamento Para Deploy')
-                    String nomeDB
                     String usuario
 
                     // Valida a Tag selecionada com a Tag do planejamento
@@ -220,28 +217,8 @@ pipeline {
                         }
                     }
 
-                    if (Database == 'homolog') {
-                        nomeDB = 'Homologação'
-                    } else if (Database == 'prod') {
-                        nomeDB = 'Produção'
-                    }
-
-                    // Descrição do build
-                    usuario = jsonPlan.autor.trim().split()[0] // Primeiro nome do analista
-                    currentBuild.description = "Tag: ${Tag} | Usr: ${usuario} | DB: ${nomeDB}"
-
-                    texto = [
-                        lib.text('Parâmetros de Execução do Build'),
-                        lib.text("Tag: ${Tag}"),
-                        lib.text("Database: ${nomeDB}"),
-                        lib.text(''),
-                        lib.text('Dados do Build'),
-                        lib.text("Username: ${lib.getBuildStarter()}"),
-                        lib.text("Build #: ${env.BUILD_NUMBER}"),
-                        lib.text("Job Name: ${env.JOB_NAME}"),
-                        lib.text("Workspace: ${env.WORKSPACE}")
-                    ]
-                    echo lib.writeText(texto)
+                    // Variável para armazenar o diretório raiz do repositório
+                    diretorioRaiz = jsonConf.rootDirectories.deploy
 
                     // Dados do database
                     database.descricao   = jsonData[Database].descricao
@@ -250,6 +227,23 @@ pipeline {
                     database.serviceName = jsonData[Database].serviceName
 
                     database.conexao = "$DB_CONN_USR/$DB_CONN_PSW@${database.enderecoIP}:${database.porta}/${database.serviceName}"
+
+                    // Descrição do build
+                    usuario = jsonPlan.autor.trim().split()[0] // Primeiro nome do analista
+                    currentBuild.description = "Tag: ${Tag} | Usr: ${usuario} | DB: ${database.descricao}"
+
+                    texto = [
+                        lib.text('Parâmetros de Execução do Build'),
+                        lib.text("Tag: ${Tag}"),
+                        lib.text("Database: ${database.descricao}"),
+                        lib.text(''),
+                        lib.text('Dados do Build'),
+                        lib.text("Username: ${lib.getBuildStarter()}"),
+                        lib.text("Build #: ${env.BUILD_NUMBER}"),
+                        lib.text("Job Name: ${env.JOB_NAME}"),
+                        lib.text("Workspace: ${env.WORKSPACE}")
+                    ]
+                    echo lib.writeText(texto)
 
                     // Mensagem de alerta para database de produção
                     if (Database == 'prod') {
@@ -263,6 +257,11 @@ pipeline {
                         ]
                         echo lib.writeText(texto)
                     }
+
+                    // Inicializa o nome dos scripts das ações
+                    acao.matarSessoes.script      = jsonConf.scripts.killSessions
+                    acao.listarInvalidos.script   = jsonConf.scripts.listInvalids
+                    acao.recompilarObjetos.script = jsonConf.scripts.compileObjects
 
                     // Ações planejadas
                     acao.matarSessoes.executar      = jsonPlan.acoes.matarSessoes
@@ -311,16 +310,15 @@ pipeline {
                     String retorno
 
                     jsonPlan.objetos.each { obj ->
-                        lib.line("Verifica a existência do arquivo: ${diretorioRaiz}/${obj.nome}")
+                        lib.line("Verifica a existência do script: ${diretorioRaiz}/${obj.nome}")
                         if (!fileExists(file: "${diretorioRaiz}/${obj.nome}")) {
-                            error lib.status('E', "Arquivo ${diretorioRaiz}/${obj.nome} programado para deploy não encontrado")
+                            error lib.status('E', "Script ${diretorioRaiz}/${obj.nome} programado para deploy não encontrado")
                         }
-                        echo lib.line("Arquivo: ${diretorioRaiz}/${obj.nome}")
+                        echo lib.line("Script: ${diretorioRaiz}/${obj.nome}")
 
-                        lib.line('Verifica encoding do arquivo')
+                        lib.line('Verifica encoding do script')
                         //comando = "uchardet ${diretorioRaiz}/${obj.nome}"
                         //retorno = sh(script: comando, returnStdout: true).trim().toUpperCase()
-
                         comando = "file -bi ${diretorioRaiz}/${obj.nome} | awk -F'charset=' '{print \$2}'"
                         retorno = sh(script: comando, returnStdout: true).trim().toUpperCase()
 
@@ -329,8 +327,24 @@ pipeline {
                             echo lib.status('S', "Encoding válido: ${retorno}")
                         } else {
                             echo lib.status('E', "Encoding inválido: ${retorno}")
-                            error lib.status('E', "Arquivo ${diretorioRaiz}/${obj.nome} programado para deploy não está em US-ASCII ou UTF-8")
+                            error lib.status('E', "Script ${diretorioRaiz}/${obj.nome} programado para deploy não está em US-ASCII ou UTF-8")
                         }
+
+                        if (jsonConf.validateScript) {
+                            lib.line('Verifica caracteres inválidos no script')
+
+                            lib.scriptValidator("${diretorioRaiz}/${obj.nome}")
+                            if (lib.response.error) {
+                                error lib.status('E', "Chamada da API de validação dos scripts não foi feita:\n${lib.response.message}")
+                            }
+                            echo lib.writeText(lib.response.text)
+                            if (lib.response.status != 200) {
+                                error lib.status('E', "Script ${diretorioRaiz}/${obj.nome} com caracteres inválidos")
+                            }
+                        }
+                    }
+                    if (!jsonConf.validateScript) {
+                        lib.status('A', 'Verificação de caracteres inválidos no script está desabilitada nos parâmetros')
                     }
                     echo lib.line('Final da Validação dos Tipos de Arquivos Planejados Para Deploy')
                 } // script
@@ -390,9 +404,22 @@ pipeline {
                         echo lib.line("Retorno da execução:\n${retorno}")
 
                         retorno = retorno.toUpperCase()
-                        switch (true) {
-                            case retorno.contains('ERROR'):
+
+                        // Se o retorno contém "error", valida os objetos com check de erros
+                        if (retorno.contains('ERROR')) {
+                            // Se o tipo do objeto estiver na lista de check, retorno deve conter "No errors."
+                            if (tipoObjeto in lib.checkErrors) {
+                                // Se não contém, é erro
+                                if (!retorno.contains('NO ERRORS.')) {
+                                    error lib.status('E', "Erro aplicando ${obj.nome} - Deploy abortado!")
+                                }
+                            } else { // Se contém "ERROR" e não é objeto com check, também é erro
                                 error lib.status('E', "Erro aplicando ${obj.nome} - Deploy abortado!")
+                            }
+                        }
+
+                        // Se não gerou o erro acima, testa se teve sucesso na execução do script
+                        switch (true) {
                             case retorno.contains('CREATED'):
                                 echo lib.status('S', "${obj.nome} criado")
                                 break
@@ -501,6 +528,7 @@ pipeline {
                         lib.flushLog()
                         lib.finishLog(
                             action     : 'Deploy',
+                            database   : dbServiceName,
                             tag        : Tag,
                             buildNumber: env.BUILD_NUMBER,
                             status     : status
