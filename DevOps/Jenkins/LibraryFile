@@ -72,7 +72,6 @@ Map parseJSON(String jsonFile, String description) {
 --------------------------------------------------*/
 void scriptValidator(String script) {
     def httpResponse
-    String situacao
 
     // Reseta a variável global antes da execução
     response.error   = false
@@ -97,29 +96,35 @@ void scriptValidator(String script) {
         return
     }
 
-    if (httpResponse.status == 200) {
-        situacao = "sucesso"
-    } else {
-        situacao = "erro"
-    }
+    response.status = httpResponse.status
 
-    response.text = [
-        text("Validação do script com ${situacao}"),
-        text("Status: ${httpResponse.status}")
-    ]
+    if (httpResponse.status == 200) {
+        response.text = [
+            text("[SUCESSO] Validação dos caracteres do script com sucesso"),
+        ]
+    } else {
+        response.text = [
+            text("[ERRO] Validação dos caracteres do script com erro"),
+        ]
+    }
+    response.text << text("Status: ${httpResponse.status}")
+    response.text << text('')
+    response.text << text('Response:')
     if (httpResponse.content != null) {
-        response.text << text('')
         try {
-            response.text << text('Response:')
-            response.text << text(JsonOutput.prettyPrint(httpResponse.content))
+            JsonOutput.prettyPrint(httpResponse.content).split('\n').each { line ->
+                response.text << text(line)
+            }
         } catch (Exception ignored) {
-            response.text << text("Response: ${httpResponse.content}")
+            response.text << text("    ${httpResponse.content}")
         }
         response.text << text('')
     }
-    response.text << text("API retornou com ${situacao}")
-
-    response.status = httpResponse.status
+    if (httpResponse.status == 200) {
+        response.text << text("API executou e retornou com sucesso")
+    } else {
+        response.text << text("API executou e retornou com erro")
+    }
 }
 
 
