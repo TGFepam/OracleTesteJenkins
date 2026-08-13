@@ -1,13 +1,19 @@
 {
     "createLog": true,
     "consistRevert": true,
+    "validateScript": true,
+    "dbServiceName": {
+        "homolog": "homologa",
+        "forms12c": "hmlforms",
+        "prod": "fprod"
+    },
     "rootDirectories": {
         "deploy": "Deploy",
         "revert": "Revert"
     },
     "scripts": {
-        "killSessions": "Config/Scripts/KillSessions.sql",
-        "listInvalids": "Config/Scripts/ListInvalids.sql",
-        "compileObjects": "Config/Scripts/CompileObjects.sql"
+        "killSessions": "DevOps/Scripts/KillSessions.sql",
+        "listInvalids": "DevOps/Scripts/ListInvalids.sql",
+        "compileObjects": "DevOps/Scripts/CompileObjects.sql"
     }
 }
