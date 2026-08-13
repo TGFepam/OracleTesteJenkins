@@ -1,8 +1,8 @@
 {
     "autor": "Tiago Gabriel",
-    "data": "2026-07-24",
+    "data": "2026-08-13",
     "descricao": "Teste do Jenkins",
-    "tag": "v2026.07.24.01",
+    "tag": "v2026.08.13.01",
     "acoes": {
         "matarSessoes": false,
         "listarInvalidos": true,
@@ -12,6 +12,14 @@
         {
             "nome": "Packages/pck_teste_jenkins.pck",
             "descricao": "Teste do Jenkins"
+        },
+        {
+            "nome": "Packages/pck_net_processos.pck",
+            "descricao": "Processos"
+        },
+        {
+            "nome": "Packages/pck_proc_fluxos.pck",
+            "descricao": "Fluxos"
         }
     ]
 }
