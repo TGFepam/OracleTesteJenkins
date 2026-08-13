@@ -73,6 +73,13 @@ Map parseJSON(String jsonFile, String description) {
 void scriptValidator(String script) {
     List<String> text = []
     def httpResponse
+    String situacao
+
+    // Reseta a variável global antes da execução
+    response.error   = false
+    response.message = ''
+    response.status  = 0
+    response.text    = []
 
     try {
         httpResponse = httpRequest url: 'http://devops.semars.intra.rs.gov.br/validatorscriptsql/ValidatorFile',
@@ -88,32 +95,18 @@ void scriptValidator(String script) {
     } catch (Exception e) {
         response.error   = true
         response.message = e.getMessage()
-        response.status  = 0
-        response.text    = []
         return
     }
 
-    response.error   = false
-    response.message = ''
-
     if (httpResponse.status == 200) {
-        text << 'Sucesso na validação do script'
-        text << "Status: ${httpResponse.status}"
-        if (httpResponse.content != null) {
-            text << ''
-            try {
-                text << 'Response:'
-                text << JsonOutput.prettyPrint(httpResponse.content)
-            } catch (Exception ignored) {
-                text << "Response: ${httpResponse.content}"
-            }
-        }
-        text << ''
-        text << 'API retornou com sucesso'
-        text << 'Script sem caracteres inválidos'
+        situacao = "sucesso"
     } else {
-        text << 'Erro na validação do script'
-        text << "Status: ${httpResponse.status}"
+        situacao = "erro"
+    }
+    
+    text << "Validação do script com ${situacao}"
+    text << "Status: ${httpResponse.status}"
+    if (httpResponse.content != null) {
         text << ''
         try {
             text << 'Response:'
@@ -122,9 +115,8 @@ void scriptValidator(String script) {
             text << "Response: ${httpResponse.content}"
         }
         text << ''
-        text << "API retornou com erro"
-        text << "Script com caracteres inválidos"
     }
+    text << "API retornou com ${situacao}"
 
     response.status = httpResponse.status
     response.text   = text
