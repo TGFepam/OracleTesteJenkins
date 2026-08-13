@@ -71,7 +71,6 @@ Map parseJSON(String jsonFile, String description) {
     Verificação de caracteres inválidos no script
 --------------------------------------------------*/
 void scriptValidator(String script) {
-    List<String> text = []
     def httpResponse
     String situacao
 
@@ -104,24 +103,23 @@ void scriptValidator(String script) {
         situacao = "erro"
     }
 
-    text = [
+    response.text = [
         text("Validação do script com ${situacao}"),
         text("Status: ${httpResponse.status}")
     ]
     if (httpResponse.content != null) {
-        text << texto('')
+        response.text << text('')
         try {
-            text << texto('Response:')
-            text << texto(JsonOutput.prettyPrint(httpResponse.content))
+            response.text << text('Response:')
+            response.text << text(JsonOutput.prettyPrint(httpResponse.content))
         } catch (Exception ignored) {
-            text << texto("Response: ${httpResponse.content}")
+            response.text << text("Response: ${httpResponse.content}")
         }
-        text << texto('')
+        response.text << text('')
     }
-    text << texto("API retornou com ${situacao}")
+    response.text << text("API retornou com ${situacao}")
 
     response.status = httpResponse.status
-    response.text   = text
 }
 
 
