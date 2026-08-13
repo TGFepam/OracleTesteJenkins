@@ -103,20 +103,22 @@ void scriptValidator(String script) {
     } else {
         situacao = "erro"
     }
-    
-    text << "Validação do script com ${situacao}"
-    text << "Status: ${httpResponse.status}"
+
+    text = [
+        text("Validação do script com ${situacao}"),
+        text("Status: ${httpResponse.status}")
+    ]
     if (httpResponse.content != null) {
-        text << ''
+        text << texto('')
         try {
-            text << 'Response:'
-            text << JsonOutput.prettyPrint(httpResponse.content)
+            text << texto('Response:')
+            text << texto(JsonOutput.prettyPrint(httpResponse.content))
         } catch (Exception ignored) {
-            text << "Response: ${httpResponse.content}"
+            text << texto("Response: ${httpResponse.content}")
         }
-        text << ''
+        text << texto('')
     }
-    text << "API retornou com ${situacao}"
+    text << texto("API retornou com ${situacao}")
 
     response.status = httpResponse.status
     response.text   = text

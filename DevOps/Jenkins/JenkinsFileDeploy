@@ -337,8 +337,7 @@ pipeline {
                             if (lib.response.error) {
                                 error lib.status('E', "Chamada da API de validação dos scripts não foi feita:\n${lib.response.message}")
                             }
-                            texto = lib.response.text
-                            echo lib.writeText(texto)
+                            echo lib.writeText(lib.response.text)
                             if (lib.response.status != 200) {
                                 error lib.status('E', "Script ${diretorioRaiz}/${obj.nome} com caracteres inválidos")
                             }
