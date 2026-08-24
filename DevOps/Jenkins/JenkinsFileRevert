@@ -526,9 +526,11 @@ pipeline {
                 } else {
                     echo 'Arquivo de log do revert não foi criado'
                 }
-                echo 'Limpando a Workspace após o revert com sucesso'
                 if (status == 'sucesso') {
+                    echo 'Limpando a Workspace após o revert com sucesso'
                     cleanWs() // Limpa resíduos de builds antigos
+                } else {
+                    echo 'A Workspace não será limpa pois o revert não teve sucesso'
                 }
             } // script
         } // always
