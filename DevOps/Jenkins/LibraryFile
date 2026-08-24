@@ -65,7 +65,7 @@ void validateScriptEncoding(String script) {
     String retBOM
 
     //Para utilização do uchardet depende da instalação
-    //cmdCharset = "uchardet ${diretorioRaiz}/${obj.nome}"
+    //cmdCharset = "uchardet ${script}"
     //retCharset = sh(script: comando, returnStdout: true).trim().toUpperCase()
 
     //Comando para retorno do charset
@@ -76,18 +76,17 @@ void validateScriptEncoding(String script) {
         // Se o encoding é válido, testa o BOM
 
         // Comando para retorno do BOM
-        // orig = head -c 3 ${script} | hexdump -ve '/1 "%02x"' | awk '{print ($0 == "efbbbf" ? "yes" : "no")}'
         cmdBOM = """head -c 3 ${script} | hexdump -ve '/1 "%02x"' | awk '{print (\$0 == "efbbbf" ? "yes" : "no")}'"""
         retBOM = sh(script: cmdBOM, returnStdout: true).trim().toUpperCase()
         if (retBOM == 'YES') {
             echo status('E', "Encoding válido: ${retCharset} porém script possui BOM")
-            error status('E', "Script ${diretorioRaiz}/${obj.nome} programado para deploy com encoding inválido")
+            error status('E', "Script ${script} programado para deploy com encoding inválido")
         } else {
             echo status('S', "Encoding válido: ${retCharset}")
         }
     } else {
         echo status('E', "Encoding inválido: ${retCharset}")
-        error status('E', "Script ${diretorioRaiz}/${obj.nome} programado para deploy com encoding inválido")
+        error status('E', "Script ${script} programado para deploy com encoding inválido")
     }
 }
 
