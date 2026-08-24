@@ -1,8 +1,8 @@
 {
     "autor": "Tiago Gabriel",
-    "data": "2026-08-13",
-    "descricao": "Teste do Jenkins",
-    "tag": "v2026.08.13.01",
+    "data": "2026-08-24",
+    "descricao": "Teste de configuração do Jenkins",
+    "tag": "v2026.08.24.01",
     "acoes": {
         "matarSessoes": false,
         "listarInvalidos": true,
@@ -10,8 +10,8 @@
     },
     "objetos": [
         {
-            "nome": "Scripts/S_20260622_01_TG_Remover_Procedure_PCK_TESTE_JENKINS.sql",
-            "descricao": "Remove a função de teste do Jenkins"
+            "nome": "Packages/pck_teste_jenkins.pck",
+            "descricao": "Package para testes da configuração do Jenkins."
         }
     ]
 }

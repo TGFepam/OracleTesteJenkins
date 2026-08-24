@@ -36,6 +36,9 @@ String diretorioRaiz = ''
 // Variável para display de texto em bloco
 List<String> texto = []
 
+// Variável com o alerta de package criada parcialmente
+boolean packageParcial = false
+
 
 pipeline {
     agent any
@@ -277,48 +280,26 @@ pipeline {
             steps {
                 script {
                     echo lib.line('Início da Validação dos Objetos Planejados Para Revert')
-                    String comando
-                    String retorno
 
                     jsonPlan.objetos.each { obj ->
-                        lib.line("Verifica a existência do script: ${diretorioRaiz}/${obj.nome}")
+                        echo lib.line("Verifica a existência do script: ${diretorioRaiz}/${obj.nome}")
                         if (!fileExists(file: "${diretorioRaiz}/${obj.nome}")) {
                             error lib.status('E', "Script ${diretorioRaiz}/${obj.nome} programado para revert não encontrado")
                         }
                         echo lib.line("Script: ${diretorioRaiz}/${obj.nome}")
 
-                        lib.line('Verifica encoding do script')
-                        //comando = "uchardet ${diretorioRaiz}/${obj.nome}"
-                        //retorno = sh(script: comando, returnStdout: true).trim().toUpperCase()
-                        comando = "file -bi ${diretorioRaiz}/${obj.nome} | awk -F'charset=' '{print \$2}'"
-                        retorno = sh(script: comando, returnStdout: true).trim().toUpperCase()
+                        echo lib.line('Verifica encoding do script')
+                        lib.validateScriptEncoding("${diretorioRaiz}/${obj.nome}")
 
-                        // ASCII é um subset do UTF-8 e apenas indica um arquivo sem acentos ou caracteres especias
-                        if (retorno in ['US-ASCII', 'UTF-8']) {
-                            echo lib.status('S', "Encoding válido: ${retorno}")
-                        } else {
-                            echo lib.status('E', "Encoding inválido: ${retorno}")
-                            error lib.status('E', "Script ${diretorioRaiz}/${obj.nome} programado para revert não está em US-ASCII UTF-8")
-                        }
-
-                        //if (jsonConf.validateScript) {
                         if (jsonConf.validateScript[Database]) {
-                            lib.line('Verifica caracteres inválidos no script')
-
-                            lib.scriptValidator("${diretorioRaiz}/${obj.nome}")
-                            if (lib.response.error) {
-                                error lib.status('E', "Chamada da API de validação dos scripts não foi feita:\n${lib.response.message}")
-                            }
-                            echo lib.writeText(lib.response.text)
-                            if (lib.response.status != 200) {
-                                error lib.status('E', "Script ${diretorioRaiz}/${obj.nome} com caracteres inválidos")
-                            }
+                            echo lib.line('Verifica caracteres inválidos no script')
+                            lib.validateScriptCharacters("${diretorioRaiz}/${obj.nome}")
                         }
                     }
-                    if (!jsonConf.validateScript) {
-                        lib.status('A', 'Verificação de caracteres inválidos no script está desabilitada nos parâmetros')
+                    if (!jsonConf.validateScript[Database]) {
+                        echo lib.status('A', 'Verificação de caracteres inválidos no script está desabilitada nos parâmetros')
                     }
-                    echo lib.line('Final da Validação dos Tipos de Arquivos Planejados Para Revert')
+                    echo lib.line('Final da Validação dos Objetos Planejados Para Revert')
                 } // script
             } // steps
         } // stage 'Valida Objetos'
@@ -341,6 +322,7 @@ pipeline {
                         error lib.status('E', "Script ${script} para matar as sessões antes do revert não encontrado")
                     }
 
+                    // Executa o script
                     retorno = lib.runScript(script, database.conexao)
                     echo lib.line("Retorno da execução:\n${retorno}")
 
@@ -372,11 +354,11 @@ pipeline {
                         ]
                         echo lib.writeText(texto)
 
+                        // Executa o script
                         retorno = lib.runScript("${diretorioRaiz}/${obj.nome}", database.conexao, tipoObjeto)
                         echo lib.line("Retorno da execução:\n${retorno}")
 
                         retorno = retorno.toUpperCase()
-
                         // Se o retorno contém "error", valida os objetos com check de erros
                         if (retorno.contains('ERROR')) {
                             // Se o tipo do objeto estiver na lista de check, retorno deve conter "No errors."
@@ -393,7 +375,25 @@ pipeline {
                         // Se não gerou o erro acima, testa se teve sucesso na execução do script
                         switch (true) {
                             case retorno.contains('CREATED'):
-                                echo lib.status('S', "${obj.nome} criado")
+                                // O retorno CREATED também é para packages. Se for o caso, alerta para criação apenas da specification ou apenas do body.
+                                if (tipoObjeto == 'package') {
+                                    if (retorno.contains('PACKAGE CREATED.')) {
+                                        if (retorno.contains('PACKAGE BODY CREATED.')) {
+                                            echo lib.status('S', "${obj.nome} criado")
+                                            packageParcial = false
+                                        } else {
+                                            echo lib.status('A', "${obj.nome} criado parcialmente - apenas a specification")
+                                            packageParcial = true
+                                        }
+                                    } else {
+                                        if (retorno.contains('PACKAGE BODY CREATED.')) {
+                                            echo lib.status('A', "${obj.nome} criado parcialmente - apenas o body")
+                                            packageParcial = true
+                                        }
+                                    }
+                                } else {
+                                    echo lib.status('S', "${obj.nome} criado")
+                                }
                                 break
                             case retorno.contains('ALTERED'):
                                 echo lib.status('S', "${obj.nome} alterado")
@@ -429,6 +429,7 @@ pipeline {
                         error lib.status('E', "Script ${script} para listar objetos inválidos após o revert não encontrado")
                     }
 
+                    // Executa o script
                     retorno = lib.runScript(script, database.conexao)
                     echo lib.line("Retorno da execução:\n${retorno}")
 
@@ -461,6 +462,7 @@ pipeline {
                         error lib.status('E', "Script ${script} para recompilar objetos inválidos após o revert não encontrado")
                     }
 
+                    // Executa o script
                     retorno = lib.runScript(script, database.conexao)
                     echo lib.line("Retorno da execução:\n${retorno}")
 
@@ -485,25 +487,30 @@ pipeline {
                     echo 'Finaliza o log e arquiva nos artefatos do build'
                     String status
 
-                    if (currentBuild.result == 'SUCCESS') {
-                        status = 'sucesso'
-                    } else if (currentBuild.result == 'UNSTABLE') {
+                    if (packageParcial) {
                         status = 'alerta'
-                    } else if (currentBuild.result == 'FAILURE') {
-                        status = 'erro'
                     } else {
-                        status = 'status indefinido'
+                        if (currentBuild.result == 'SUCCESS') {
+                            status = 'sucesso'
+                        } else if (currentBuild.result == 'UNSTABLE') {
+                            status = 'alerta'
+                        } else if (currentBuild.result == 'FAILURE') {
+                            status = 'erro'
+                        } else {
+                            status = 'status indefinido'
+                        }
                     }
 
                     // Verifica fisicamente se o arquivo foi criado no workspace
                     if (fileExists("${lib.log.path}/${lib.log.name}")) {
                         lib.flushLog()
                         lib.finishLog(
-                            action     : 'Revert',
-                            database   : Database,
-                            tag        : Tag,
-                            buildNumber: env.BUILD_NUMBER,
-                            status     : status
+                            action        : 'Revert',
+                            database      : Database,
+                            tag           : Tag,
+                            buildNumber   : env.BUILD_NUMBER,
+                            status        : status,
+                            packageParcial: packageParcial
                         )
                         archiveArtifacts artifacts: "${lib.log.path}/${lib.log.name}", fingerprint: true, onlyIfSuccessful: false, allowEmptyArchive: true
 
@@ -517,8 +524,10 @@ pipeline {
                 } else {
                     echo 'Arquivo de log do revert não foi criado'
                 }
-                echo 'Limpando o Workspace após o revert'
-                cleanWs() // Limpa resíduos de builds antigos
+                echo 'Limpando a Workspace após o revert com sucesso'
+                if (status == 'sucesso') {
+                    cleanWs() // Limpa resíduos de builds antigos
+                }
             } // script
         } // always
     } // post

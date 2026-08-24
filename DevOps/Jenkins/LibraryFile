@@ -29,18 +29,6 @@ List<String> checkErrors = [
 
 
 /*--------------------------------------------------
-    Variável da validação de código pela API
---------------------------------------------------*/
-@Field
-Map response = [
-    error   : false,
-    message : '',
-    status  : 0,
-    text    : []
-]
-
-
-/*--------------------------------------------------
     Processamento dos JSONs
 --------------------------------------------------*/
 Map parseJSON(String jsonFile, String description) {
@@ -68,18 +56,56 @@ Map parseJSON(String jsonFile, String description) {
 
 
 /*--------------------------------------------------
+    Validação do encoding do script
+--------------------------------------------------*/
+void validateScriptEncoding(String script) {
+    String cmdCharset
+    String retCharset
+    String cmdBOM
+    String retBOM
+
+    //Para utilização do uchardet depende da instalação
+    //cmdCharset = "uchardet ${diretorioRaiz}/${obj.nome}"
+    //retCharset = sh(script: comando, returnStdout: true).trim().toUpperCase()
+
+    //Comando para retorno do charset
+    cmdCharset = "file -bi ${script} | awk -F'charset=' '{print \$2}'"
+    retCharset = sh(script: cmdCharset, returnStdout: true).trim().toUpperCase()
+    // ASCII é um subset do UTF-8 e apenas indica um arquivo sem acentos ou caracteres especias
+    if (retCharset in ['US-ASCII', 'UTF-8']) {
+        // Se o encoding é válido, testa o BOM
+
+        // Comando para retorno do BOM
+        // orig = head -c 3 ${script} | hexdump -ve '/1 "%02x"' | awk '{print ($0 == "efbbbf" ? "yes" : "no")}'
+        cmdBOM = """head -c 3 ${script} | hexdump -ve '/1 "%02x"' | awk '{print (\$0 == "efbbbf" ? "yes" : "no")}'"""
+        retBOM = sh(script: cmdBOM, returnStdout: true).trim().toUpperCase()
+        if (retBOM == 'YES') {
+            echo status('E', "Encoding válido: ${retCharset} porém script possui BOM")
+            error status('E', "Script ${diretorioRaiz}/${obj.nome} programado para deploy com encoding inválido")
+        } else {
+            echo status('S', "Encoding válido: ${retCharset}")
+        }
+    } else {
+        echo status('E', "Encoding inválido: ${retCharset}")
+        error status('E', "Script ${diretorioRaiz}/${obj.nome} programado para deploy com encoding inválido")
+    }
+}
+
+
+/*--------------------------------------------------
     Verificação de caracteres inválidos no script
 --------------------------------------------------*/
-void scriptValidator(String script) {
+void validateScriptCharacters(String script) {
     def httpResponse
-
-    // Reseta a variável global antes da execução
-    response.error   = false
-    response.message = ''
-    response.status  = 0
-    response.text    = []
+    List<String> texto = []
+    Map resposta = [
+        mensagem: '',
+        status  : 0,
+        texto   : []
+    ]
 
     try {
+        // Chama a API de validação
         httpResponse = httpRequest url: 'http://devops.semars.intra.rs.gov.br/validatorscriptsql/ValidatorFile',
                                     httpMode: 'POST',
                                     quiet: true,
@@ -91,39 +117,40 @@ void scriptValidator(String script) {
                                     timeout: 20
 
     } catch (Exception e) {
-        response.error   = true
-        response.message = e.getMessage()
-        return
+        error status('E', "Chamada da API de validação dos scripts não foi feita:\n${e.getMessage()}")
     }
-
-    response.status = httpResponse.status
 
     if (httpResponse.status == 200) {
-        response.text = [
-            text("[SUCESSO] Validação dos caracteres do script com sucesso"),
+        texto = [
+            text("[SUCESSO] Validação dos caracteres do script com sucesso")
         ]
     } else {
-        response.text = [
-            text("[ERRO] Validação dos caracteres do script com erro"),
+        texto = [
+            text("[ERRO] Validação dos caracteres do script com erro")
         ]
     }
-    response.text << text("Status: ${httpResponse.status}")
-    response.text << text('')
-    response.text << text('Response:')
+    texto << text("Status: ${httpResponse.status}")
+    texto << text('')
+    texto << text('Resposta:')
     if (httpResponse.content != null) {
         try {
             JsonOutput.prettyPrint(httpResponse.content).split('\n').each { line ->
-                response.text << text(line)
+                texto << text(line)
             }
         } catch (Exception ignored) {
-            response.text << text("    ${httpResponse.content}")
+            texto << text("    ${httpResponse.content}")
         }
-        response.text << text('')
+        texto << text('')
     }
     if (httpResponse.status == 200) {
-        response.text << text("API executou e retornou com sucesso")
+        texto << text("API executou e retornou com sucesso")
     } else {
-        response.text << text("API executou e retornou com erro")
+        texto << text("API executou e retornou com erro")
+    }
+    echo writeText(texto)
+
+    if (httpResponse.status != 200) {
+        error status('E', "Script ${script} com caracteres inválidos")
     }
 }
 
@@ -132,27 +159,31 @@ void scriptValidator(String script) {
     Execução de script no SQL*Plus
 --------------------------------------------------*/
 String runScript(String script, String connection, String objectType = '') {
-    // Lista dos objetos que terão o "show errors"
+    String config
     String comando
     String input
     String retorno
 
+    // Converte o charset do script
+    //sh "iconv -f UTF-8 -t ISO-8859-1 ${script} -o ${script}.new"
+
+    config = 'export LD_LIBRARY_PATH=/opt/oracle/instantclient_21_10\n' +
+                'export PATH=$LD_LIBRARY_PATH:$PATH\n' +
+                //'export NLS_LANG=AMERICAN_AMERICA.WE8ISO8859P1\n' +
+                'export NLS_LANG=AMERICAN_AMERICA.AL32UTF8\n' +
+                'export LANG=en_US.UTF-8\n' + // Config do shell
+                'export LC_ALL=en_US.UTF-8\n' // Config do shell
+
     if (!objectType) {
-        comando = 'export LD_LIBRARY_PATH=/opt/oracle/instantclient_21_10\n' +
-                  'export PATH=$LD_LIBRARY_PATH:$PATH\n' +
-                  'export NLS_LANG=AMERICAN_AMERICA.WE8ISO8859P1\n' +
-                  """echo "@${script}" | sqlplus "${connection}";\n"""
+        comando = config + """echo "@${script}" | sqlplus "${connection}";\n"""
     } else {
-        // Se o tipo do objeto estiver na lista, depois do script roda o "show errors"
+        // Se o tipo do objeto estiver na lista de check, depois do script roda o "show errors"
         if (objectType in checkErrors) {
             input = '(echo "@' + script + '"; echo "show errors")'
         } else {
             input = 'echo "@' + script + '"'
         }
-        comando = 'export LD_LIBRARY_PATH=/opt/oracle/instantclient_21_10\n' +
-                  'export PATH=$LD_LIBRARY_PATH:$PATH\n' +
-                  'export NLS_LANG=AMERICAN_AMERICA.WE8ISO8859P1\n' +
-                  """${input} | sqlplus "${connection}";\n"""
+        comando = config + """${input} | sqlplus "${connection}";\n"""
     }
 
     try {
@@ -162,7 +193,6 @@ String runScript(String script, String connection, String objectType = '') {
         echo status('E', "Falha rodando script no SQL*Plus:\n${e.getMessage()}")
         error status('E', "Falha rodando o comando")
     }
-    
     return retorno
 }
 
@@ -419,12 +449,13 @@ void finishLog(Map args) {
     }
 
     // Extrai os parâmetros nomeados do Map.
-    //def action         = args.action ?: 'deploy' // Para definir um valor padrão
-    String action      = args.action
-    String database    = args.database
-    String tag         = args.tag
-    String buildNumber = args.buildNumber
-    String status      = args.status
+    //def action             = args.action ?: 'deploy' // Para definir um valor padrão
+    String action          = args.action
+    String database        = args.database
+    String tag             = args.tag
+    String buildNumber     = args.buildNumber
+    String status          = args.status
+    boolean packageParcial = args.packageParcial
 
     String timestamp = new Date().format('yyyyMMdd_HHmmss')
 
@@ -433,13 +464,16 @@ void finishLog(Map args) {
         '',
         '',
         '------------------------------',
-        "${action} terminado com ${status}",
-        "Database : ${database}",
-        "Tag      : ${tag}",
-        "Build #  : ${buildNumber}",
-        "Timestamp: ${timestamp}",
-        '------------------------------'
+        "${action} terminado com ${status}"
     ]
+    if (packageParcial) {
+        log.text << 'Package criada parcialmente'
+    }
+    log.text << "Database : ${database}"
+    log.text << "Tag      : ${tag}"
+    log.text << "Build #  : ${buildNumber}"
+    log.text << "Timestamp: ${timestamp}"
+    log.text << '------------------------------'
 
     // Descarrega o texto
     log.handle.withWriterAppend('UTF-8') { writer ->  // Acessa o arquivo

@@ -1,8 +1,8 @@
 {
     "autor": "Tiago Gabriel",
-    "data": "2026-08-13",
-    "descricao": "Teste do Jenkins",
-    "tag": "v2026.08.13.01",
+    "data": "2026-08-24",
+    "descricao": "Teste de configuração do Jenkins",
+    "tag": "v2026.08.24.01",
     "acoes": {
         "matarSessoes": false,
         "listarInvalidos": true,
@@ -11,15 +11,7 @@
     "objetos": [
         {
             "nome": "Packages/pck_teste_jenkins.pck",
-            "descricao": "Teste do Jenkins"
-        },
-        {
-            "nome": "Packages/pck_net_processos.pck",
-            "descricao": "Processos"
-        },
-        {
-            "nome": "Packages/pck_proc_fluxos.pck",
-            "descricao": "Fluxos"
+            "descricao": "Package para testes da configuração do Jenkins."
         }
     ]
 }
