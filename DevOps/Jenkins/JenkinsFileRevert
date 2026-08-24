@@ -483,23 +483,25 @@ pipeline {
     post {
         always {
             script {
-                if (lib.log.create) {
-                    echo 'Finaliza o log e arquiva nos artefatos do build'
-                    String status
+                echo 'Finaliza o build'
+                String status
 
-                    if (packageParcial) {
+                if (packageParcial) {
+                    status = 'alerta'
+                } else {
+                    if (currentBuild.result == 'SUCCESS') {
+                        status = 'sucesso'
+                    } else if (currentBuild.result == 'UNSTABLE') {
                         status = 'alerta'
+                    } else if (currentBuild.result == 'FAILURE') {
+                        status = 'erro'
                     } else {
-                        if (currentBuild.result == 'SUCCESS') {
-                            status = 'sucesso'
-                        } else if (currentBuild.result == 'UNSTABLE') {
-                            status = 'alerta'
-                        } else if (currentBuild.result == 'FAILURE') {
-                            status = 'erro'
-                        } else {
-                            status = 'status indefinido'
-                        }
+                        status = 'status indefinido'
                     }
+                }
+
+                if (lib.log.create) {
+                    echo 'Encerra o log e arquiva nos artefatos do build'
 
                     // Verifica fisicamente se o arquivo foi criado no workspace
                     if (fileExists("${lib.log.path}/${lib.log.name}")) {

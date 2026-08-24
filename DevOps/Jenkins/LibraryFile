@@ -98,11 +98,6 @@ void validateScriptEncoding(String script) {
 void validateScriptCharacters(String script) {
     def httpResponse
     List<String> texto = []
-    Map resposta = [
-        mensagem: '',
-        status  : 0,
-        texto   : []
-    ]
 
     try {
         // Chama a API de validação
