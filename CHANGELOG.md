@@ -46,18 +46,16 @@ Alterações em desenvolvimento, possívelmente já mergeadas na branch **`main`
 
 ---
 
-## [v2026.08.24.06] - 2026-08-24
+## [v2026.08.25.01] - 2026-08-25
 
-**Analista:** Catia Jardim<br>
-**Deploy:** 2026-08-24<br>
-**Tarefa:** Correcao caracteres invalido
+**Analista:** Tiago Gabriel
+**Deploy:** 2026-08-25
+**Tarefa:** Criação de package de teste para o Jenkins
 
-### [Corrigido]
+### [Adicionado]
 
 | Objeto | Realizado | Atividade |
 |--------|-----------|-----------|
-| `pck_proc_fluxos.pck` | bugfix | Correcao caracteres invalido |
-| `trg_pess_b_upd.trg` | bugfix | Correcao caracteres invalido |
-| `pck_sisauto.pck` | bugfix | Correcao caracteres invalido |
+| `pck_teste_jenkins.pck` | feature | Criar package para testes no Jenkins |
 
 ---
