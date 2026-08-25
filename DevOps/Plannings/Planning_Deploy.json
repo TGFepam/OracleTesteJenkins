@@ -1,8 +1,9 @@
 {
     "autor": "Tiago Gabriel",
-    "data": "2026-08-24",
-    "descricao": "Teste de configuração do Jenkins",
-    "tag": "v2026.08.24.01",
+    "data": "2026-08-25",
+    "tarefa": "Criação de package de teste para o Jenkins",
+    "tag": "v2026.08.25.01",
+    "realizado": "feature",
     "acoes": {
         "matarSessoes": false,
         "listarInvalidos": true,
@@ -11,7 +12,8 @@
     "objetos": [
         {
             "nome": "Packages/pck_teste_jenkins.pck",
-            "descricao": "Package para testes da configuração do Jenkins."
+            "atividade": "Criar package para testes no Jenkins",
+            "mudanca": "Adicionado"
         }
     ]
 }
