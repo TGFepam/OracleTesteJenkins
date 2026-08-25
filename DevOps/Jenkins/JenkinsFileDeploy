@@ -265,13 +265,19 @@ pipeline {
                     acao.listarInvalidos.executar   = jsonPlan.acoes.listarInvalidos
                     acao.recompilarObjetos.executar = jsonPlan.acoes.recompilarObjetos
 
+                    // Valida o parâmetro "realizado"
+                    if (!jsonPlan.realizado.toLowerCase() in lib.realizacoes) {
+                        error lib.status['E', "Parâmetro 'realizado' inválido: ${jsonPlan.realizado.toLowerCase()}"]
+                    }
+
                     texto = [
                         lib.text(''),
                         lib.text('Informações do Planejamento'),
                         lib.text("Autor: ${jsonPlan.autor}"),
                         lib.text("Data: ${jsonPlan.data}"),
-                        lib.text("Descrição: ${jsonPlan.descricao}"),
+                        lib.text("Tarefa: ${jsonPlan.tarefa}"),
                         lib.text("Tag: ${jsonPlan.tag}"),
+                        lib.text("Realizado: ${jsonPlan.realizado}"),
                         lib.text(''),
                         lib.text('Ações Planejadas'),
                         lib.text("Matar sessões: ${jsonPlan.acoes.matarSessoes ? 'SIM' : 'NÃO'}"),
@@ -310,6 +316,11 @@ pipeline {
                             error lib.status('E', "Script ${diretorioRaiz}/${obj.nome} programado para deploy não encontrado")
                         }
                         echo lib.line("Script: ${diretorioRaiz}/${obj.nome}")
+
+                        // Valida o parâmetro mudanca
+                        if (!jsonPlan.mudanca.toLowerCase() in lib.realizacoes) {
+                            error lib.status['E', "Parâmetro 'mudanca' inválido: ${jsonPlan.mudanca.toLowerCase()}"]
+                        }
 
                         echo lib.line('Verifica encoding do script')
                         lib.validateScriptEncoding("${diretorioRaiz}/${obj.nome}")
