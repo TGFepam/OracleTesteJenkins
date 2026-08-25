@@ -32,7 +32,7 @@ List<String> realizacoes = [
     Variável das mudanças previstas
 --------------------------------------------------*/
 @Field
-List<String> mudancaas = [
+List<String> mudancas = [
     'adicionado',
     'alterado',
     'descontinuado',
