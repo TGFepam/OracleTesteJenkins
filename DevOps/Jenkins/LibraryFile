@@ -17,6 +17,32 @@ Map log = [
 
 
 /*--------------------------------------------------
+    Variável das realizações previstas
+--------------------------------------------------*/
+@Field
+List<String> realizacoes = [
+    'feature',
+    'release',
+    'bugfix',
+    'hotfix'
+]
+
+
+/*--------------------------------------------------
+    Variável das mudanças previstas
+--------------------------------------------------*/
+@Field
+List<String> mudancaas = [
+    'adicionado',
+    'alterado',
+    'descontinuado',
+    'removido',
+    'corrigido',
+    'segurança'
+]
+
+
+/*--------------------------------------------------
     Variável dos tipos de objeto com check de erros
 --------------------------------------------------*/
 @Field
