@@ -318,8 +318,6 @@ pipeline {
                         echo lib.line("Script: ${diretorioRaiz}/${obj.nome}")
 
                         // Valida o parâmetro mudanca
-                        echo obj.mudanca
-                        echo obj.mudanca.toLowerCase()
                         if (!obj.mudanca.toLowerCase() in lib.mudancas) {
                             error lib.status['E', "Parâmetro 'mudanca' inválido: ${jsonPlan.mudanca.toLowerCase()}"]
                         }
