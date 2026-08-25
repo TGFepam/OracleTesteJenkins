@@ -247,6 +247,11 @@ pipeline {
                         error lib.status['E', "Parâmetro 'realizado' inválido: ${jsonPlan.realizado.toLowerCase()}"]
                     }
 
+                    // Valida o parâmetro "realizado"
+                    if (!jsonPlan.realizado.toLowerCase() in lib.realizacoes) {
+                        error lib.status['E', "Parâmetro 'realizado' inválido: ${jsonPlan.realizado.toLowerCase()}"]
+                    }
+
                     texto = [
                         lib.text(''),
                         lib.text('Informações do Planejamento'),
@@ -295,7 +300,7 @@ pipeline {
                         echo lib.line("Script: ${diretorioRaiz}/${obj.nome}")
 
                         // Valida o parâmetro mudanca
-                        if (!jsonPlan.mudanca.toLowerCase() in lib.realizacoes) {
+                        if (!obj.mudanca.toLowerCase() in lib.mudancas) {
                             error lib.status['E', "Parâmetro 'mudanca' inválido: ${jsonPlan.mudanca.toLowerCase()}"]
                         }
 
