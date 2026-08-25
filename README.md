@@ -106,7 +106,10 @@ OracleDatabase_CI_CD  → Diretório raiz do repositório
 5. Gerar os arquivos de planejamento em **`DevOps/Plannings/`**, **sempre os dois arquivos**;
 6. Abrir um **Pull Request** descrevendo a alteração efetuada, referenciando uma breve descrição e sempre que possível o card/ticket (ex.: **`FP-12345`**, **`CS-67890`**);
 7. Após a aprovação e merge do **Pull Request**, executar um **`PULL`** na branch **`main`** para atualização antes de gerar a tag e criar a tag com a data corrente e o sequencial e não a data prevista para o deploy, para mantrer a cronologia: o Jenkins assume a publicação nos ambientes;
-8. Atualizar o [CHANGELOG.md](CHANGELOG.md) com os dados da tag e as informações da entrega realizada.
+8. Atualizar o [CHANGELOG.md](CHANGELOG.md) com os dados da tag e as informações da entrega realizada;
+   - Foi criado um script do PowerShell que atualiza automaticamente o [CHANGELOG.md](CHANGELOG.md) com os dados do arquivo de planejamento de deploy: Para a correta execução será necessário alterar o formato dos arquivos de planejamento **`Planning_Deploy.json`** e **`Pnanning_Revert.json`**;
+   - Foram adicionados dois parâmetros em cada arquivo com informações necessárias para a correta e completa informação no [CHANGELOG.md](CHANGELOG.md);
+   - Inicialmente estas configurações estão em ambiente de testes controlado para validação e após o devido detalhamento será implementado em produção.
 
 ---
 

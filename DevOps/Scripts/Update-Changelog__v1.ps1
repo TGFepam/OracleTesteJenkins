@@ -63,11 +63,11 @@ $ErrorActionPreference = "Stop"
 # Sem acentos: o PowerShell 5.1 le .ps1 como ANSI quando o arquivo nao tem BOM,
 # e literais acentuados sairiam corrompidos. Para usar acentos nos rotulos,
 # salve este .ps1 como UTF-8 com BOM.
-# Quebra de linha dentro do bloco de metadados.
-# Vazio: a maioria dos visualizadores ja quebra na linha simples, e um "<br>"
-# aqui produziria uma segunda quebra, com espacamento duplo.
-# Se o seu renderizador juntar os campos numa linha so, use "<br>".
-$QUEBRA_LINHA = ""
+# Quebra de linha dentro do bloco de metadados. No Markdown, uma quebra
+# simples e tratada como espaco e as linhas virariam um paragrafo unico.
+# "<br>" e preferivel aos dois espacos no fim da linha, que sao invisiveis
+# no editor e somem em formatadores com trim de espacos.
+$QUEBRA_LINHA = "<br>"
 
 # Texto usado para marcar e detectar uma tag revertida.
 $MARCA_REVERT = "Revertido"
