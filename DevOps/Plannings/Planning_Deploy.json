@@ -3,7 +3,8 @@
     "data": "2026-08-25",
     "tarefa": "Criação de package de teste para o Jenkins",
     "tag": "v2026.08.25.01",
-    "realizado": "feature",
+    "implementacao": "feature",
+    "resultado": "Corrigido",
     "acoes": {
         "matarSessoes": false,
         "listarInvalidos": true,
@@ -13,7 +14,11 @@
         {
             "nome": "Packages/pck_teste_jenkins.pck",
             "atividade": "Criar package para testes no Jenkins",
-            "mudanca": "adicionado"
+            "resultado": "Adicionado"
+        },
+        {
+            "nome": "Packages/pck_teste_validacao.pck",
+            "atividade": "Corrigir package para testes para validação"
         }
     ]
 }

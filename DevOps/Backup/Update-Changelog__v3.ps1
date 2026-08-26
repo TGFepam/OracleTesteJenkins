@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Gera a entrada do CHANGELOG.md a partir dos planejamentos de deploy e revert.
 
@@ -8,31 +8,32 @@
     Modelo de planejamento:
 
         raiz
-            autor         : analista responsável pela tag
+            autor         : analista responsavel pela tag
             data          : data do planejamento, AAAA-MM-DD
-            tarefa        : descrição da tarefa a ser realizada nos objetos
-            tag           : no formato vAAAA.MM.DD.SQ, a posição estática do repositório
-            implementacao : fluxo do GitHub Flow obrigatório e válido somente na raiz,
+            tarefa        : descricao da tarefa a ser realizada nos objetos
+            tag           : no formato vAAAA.MM.DD.SQ, a posicao estatica do repositorio
+            implementacao : fluxo do GitHub. OBRIGATORIO e valido SOMENTE na raiz,
                             valendo para todos os objetos da tag
-            resultado     : ação resultante segundo o Keep a Changelog obrigatório na raiz,
-                            onde funciona como valor genérico. Cada objeto pode sobrepor
-            acoes         : acoes executadas durante a compilação, conforme parametrizado
+            resultado     : acao resultante segundo o Keep a Changelog. OBRIGATORIO na raiz,
+                            onde funciona como valor generico. Cada objeto pode sobrepor
+            acoes         : acoes executadas durante a compilacao, conforme parametrizacao
 
         objetos[]
-            nome          : caminho relativo dentro do Deploy ou Revert e nome do objeto
-            atividade     : descrição do que será executado no objeto
-            resultado     : opcional, quando presente é específico do objeto e sobrepõe o valor da raiz para
-                            este objeto. Quando ausente, o objeto herda a raiz
-                            Presente porém vazio é erro: use a ausência para herdar
+            nome          : caminho relativo dentro do Deploy ou Revert
+            atividade     : descricao do que sera executado no objeto
+            resultado     : OPCIONAL. Quando presente, SOBREPOE o valor da raiz para
+                            este objeto. Quando ausente, o objeto herda a raiz.
+                            Presente porem vazio e erro: use a ausencia para herdar
 
     Valores aceitos em "implementacao": feature, release, bugfix, hotfix.
 
-    Valores aceitos em "resultado": Adicionado, Alterado, Descontinuado, Removido, Corrigido,
-                                    Seguranca (maiúsculas, minúsculas e cedilha indiferentes na entrada).
+    Valores aceitos em "resultado": Adicionado, Alterado, Descontinuado, Removido,
+                                    Corrigido, Seguranca (maiusculas, minusculas e
+                                    cedilha indiferentes na entrada).
 
 .NOTES
-    Encoding: este arquivo precisa ser salvo como UTF-8 com BOM. O PowerShell 5.1 le
-    .ps1 sem BOM como ANSI, e os rótulos acentuados ("Implementação", "Segurança")
+    ENCODING: este arquivo precisa ser salvo como UTF-8 COM BOM. O PowerShell 5.1 le
+    .ps1 sem BOM como ANSI, e os rotulos acentuados ("Implementacao", "Seguranca")
     sairiam corrompidos no CHANGELOG.
 
 .EXAMPLE
@@ -87,12 +88,12 @@ $COLUNA_ATIVIDADE     = "Atividade"
 # Separador da tabela, copiado do CHANGELOG.md para não sujar o diff.
 $SEPARADOR_TABELA = "|--------|-----------|"
 
-# Valores aceitos em "implementação". Espelha lib.implementações do LibraryFile.
+# Valores aceitos em "implementacao". Espelha lib.implementacoes do LibraryFile.
 $IMPLEMENTACOES_VALIDAS = @("feature","release","bugfix","hotfix")
 
 # Ordem das seções dentro de cada versão. Espelha a tabela "Tipos de Mudanças
 # Previstas" do CHANGELOG.md.
-$RESULTADOS_VALIDOS = @("Adicionado","Alterado","Descontinuado","Removido","Corrigido","Segurança")
+$ORDEM_SECOES = @("Adicionado","Alterado","Descontinuado","Removido","Corrigido","Segurança")
 
 # Valores aceitos em "resultado". Chave em minúsculas; aceita com e sem cedilha.
 $MAPA_RESULTADO = @{
@@ -241,7 +242,7 @@ if ($objetos.Count -eq 0) { throw "O planejamento não possui objetos." }
 # Parâmetros da raiz
 #
 # Regra do modelo:
-#   implementação -> obrigatória, válida SOMENTE na raiz
+#   implementacao -> obrigatória, válida SOMENTE na raiz
 #   resultado     -> obrigatória na raiz como valor genérico; cada objeto pode sobrepor
 # ---------------------------------------------------------------------------
 
@@ -252,18 +253,18 @@ if (-not $implementacao) {
 }
 $implementacao = $implementacao.ToLower()
 if ($IMPLEMENTACOES_VALIDAS -notcontains $implementacao) {
-    throw "Valor inválido em 'implementação': '$implementacao'. " +
+    throw "Valor inválido em 'implementacao': '$implementacao'. " +
           "Aceitos: $($IMPLEMENTACOES_VALIDAS -join ', ')."
 }
 
 $resultadoRaiz = Get-Campo $plan 'resultado'
 if (-not $resultadoRaiz) {
     throw "O planejamento não possui o campo 'resultado' na raiz. " +
-          "Aceitos: $($RESULTADOS_VALIDOS -join ', ')."
+          "Aceitos: $($ORDEM_SECOES -join ', ')."
 }
 if (-not $MAPA_RESULTADO.ContainsKey($resultadoRaiz.ToLower())) {
     throw "Valor inválido em 'resultado' na raiz: '$resultadoRaiz'. " +
-          "Aceitos: $($RESULTADOS_VALIDOS -join ', ')."
+          "Aceitos: $($ORDEM_SECOES -join ', ')."
 }
 
 # ---------------------------------------------------------------------------
@@ -278,7 +279,7 @@ foreach ($obj in $objetos) {
     $nome = Get-NomeObjeto (Get-Campo $obj 'nome')
     if (-not $nome) { throw "Há objeto sem o campo 'nome' no planejamento." }
 
-    # 'implementação' vale somente na raiz; no objeto é ignorada, com aviso.
+    # 'implementacao' vale somente na raiz; no objeto é ignorada, com aviso.
     if (Test-TemCampo $obj 'implementacao') {
         $implementacaoNoObjeto += $nome
     }
@@ -300,7 +301,7 @@ foreach ($obj in $objetos) {
     $chave = $resultadoBruto.ToLower()
     if (-not $MAPA_RESULTADO.ContainsKey($chave)) {
         throw "Valor inválido em 'resultado' para '$nome': '$resultadoBruto'. " +
-              "Aceitos: $($RESULTADOS_VALIDOS -join ', ')."
+              "Aceitos: $($ORDEM_SECOES -join ', ')."
     }
     $resultado = $MAPA_RESULTADO[$chave]
 
@@ -386,7 +387,6 @@ if ($Revert) {
     Write-Host "Revert da tag $tag registrada no CHANGELOG." -ForegroundColor Green
     Write-Host ""
     Write-Host "Confira o resultado antes de commitar: git diff $Changelog"
-    Write-Host ""
     return
 }
 
@@ -408,7 +408,7 @@ $sb = [System.Text.StringBuilder]::new()
 [void]$sb.AppendLine("**${ROTULO_TAREFA}:** $tarefa$QUEBRA_LINHA")
 [void]$sb.AppendLine("**${ROTULO_IMPLEMENTACAO}:** $implementacao")
 
-foreach ($secao in $RESULTADOS_VALIDOS) {
+foreach ($secao in $ORDEM_SECOES) {
     $doGrupo = @($itens | Where-Object { $_.Resultado -eq $secao })
     if ($doGrupo.Count -eq 0) { continue }
 

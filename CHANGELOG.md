@@ -34,28 +34,14 @@ Alterações em desenvolvimento, possívelmente já mergeadas na branch **`main`
 
 ### Adicionado
 
-| Objeto | Flow | Analista | Historico |
+| Objeto | Implementação | Analista | Historico |
 |--------|------|----------|-----------|
-| `fc_calcula_multa` | feature | Tiago Gabriel | cálculo de multa por atraso conforme regra vigente a partir de 01/09.|
+| `fc_calcula_multa.fnc` | feature | Tiago Gabriel | cálculo de multa por atraso conforme regra vigente a partir de 01/09. |
 
-### [Corrigido]
+### Corrigido
 
-| Objeto | Flow | Analista | Historico |
+| Objeto | Implementação | Analista | Historico |
 |--------|------|----------|-----------|
-| `vw_clientes_ativos` | bugfix | Tiago Gabriel | remoção de `DISTINCT` desnecessário que causava full scan em `tb_cliente`. |
-
----
-
-## [v2026.08.25.01] - 2026-08-25
-
-**Analista:** Tiago Gabriel
-**Deploy:** 2026-08-25
-**Tarefa:** Criação de package de teste para o Jenkins
-
-### [Adicionado]
-
-| Objeto | Realizado | Atividade |
-|--------|-----------|-----------|
-| `pck_teste_jenkins.pck` | feature | Criar package para testes no Jenkins |
+| `vw_clientes_ativos.sql` | bugfix | Tiago Gabriel | remoção de `DISTINCT` desnecessário que causava full scan em `tb_cliente`. |
 
 ---

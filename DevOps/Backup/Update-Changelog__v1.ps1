@@ -8,32 +8,27 @@
     Modelo de planejamento:
 
         raiz
-            autor         : analista responsável pela tag
-            data          : data do planejamento, AAAA-MM-DD
-            tarefa        : descrição da tarefa a ser realizada nos objetos
-            tag           : no formato vAAAA.MM.DD.SQ, a posição estática do repositório
-            implementacao : fluxo do GitHub Flow obrigatório e válido somente na raiz,
-                            valendo para todos os objetos da tag
-            resultado     : ação resultante segundo o Keep a Changelog obrigatório na raiz,
-                            onde funciona como valor genérico. Cada objeto pode sobrepor
-            acoes         : acoes executadas durante a compilação, conforme parametrizado
+            autor      : analista responsavel pela tag
+            data       : data do planejamento, AAAA-MM-DD
+            tarefa     : descricao da tarefa a ser realizada nos objetos
+            tag        : no formato vAAAA.MM.DD.SQ é a posição estática do repositório
+            objetivo   : se informado é o objetivo do desenvolvimento, valendo para TODOS os
+                        objetos. Se não informado, cada objeto declara o seu
+            resultado  : se informado é a ação resultante do processamento, valendo para TODOS os
+                        objetos. Se não informado, cada objeto declara o seu
+            acoes      : ações a serem executadas durante a compilação, de acordo com a parametrização
 
         objetos[]
-            nome          : caminho relativo dentro do Deploy ou Revert e nome do objeto
-            atividade     : descrição do que será executado no objeto
-            resultado     : opcional, quando presente é específico do objeto e sobrepõe o valor da raiz para
-                            este objeto. Quando ausente, o objeto herda a raiz
-                            Presente porém vazio é erro: use a ausência para herdar
+            nome       : caminho relativo dentro do Deploy ou Revert indica o script a ser compilado
+            atividade  : descricao do que será executado no objeto
+            objetivo   : usado apenas quando a raiz estiver vazia, indica o desenvolvimento do objeto
+            resultado  : usado apenas quando a raiz estiver vazia. indica o resultado da operação no objeto
 
-    Valores aceitos em "implementacao": feature, release, bugfix, hotfix.
+    Valores aceitos em "objetivo": feature, release, bugfix, hotfix.
 
     Valores aceitos em "resultado": Adicionado, Alterado, Descontinuado, Removido, Corrigido,
-                                    Seguranca (maiúsculas, minúsculas e cedilha indiferentes na entrada).
+                                    Seguranca (maiusculas e minusculas indiferentes).
 
-.NOTES
-    Encoding: este arquivo precisa ser salvo como UTF-8 com BOM. O PowerShell 5.1 le
-    .ps1 sem BOM como ANSI, e os rótulos acentuados ("Implementação", "Segurança")
-    sairiam corrompidos no CHANGELOG.
 
 .EXAMPLE
     .\Update-Changelog.ps1 -Preview
@@ -48,7 +43,7 @@ param(
     [string] $Planning,
     [string] $Changelog,
 
-    # Registra a reversão de uma tag já publicada, em vez de criar entrada nova.
+    # Registra a reversão de uma tag ja publicada, em vez de criar entrada nova.
     [switch] $Revert,
 
     # Data do deploy em produção. Se omitido, usa a data do planejamento.
@@ -69,44 +64,42 @@ $ErrorActionPreference = "Stop"
 
 # Quebra de linha dentro do bloco de metadados.
 # Vazio: a maioria dos visualizadores já quebra na linha simples, e um "<br>"
-# aqui produziria uma segunda quebra, com espaçamento duplo.
-# Se o seu renderizador juntar os campos numa linha só, use "<br>".
+# aqui produziria uma segunda quebra, com espacamento duplo.
+# Se o seu renderizador juntar os campos numa linha so, use "<br>".
 $QUEBRA_LINHA = ""
 
 # Texto usado para marcar e detectar uma tag revertida.
 $MARCA_REVERT = "Revertido"
 
-# Rótulos do bloco gerado. Devem espelhar exatamente o CHANGELOG.md.
-$ROTULO_ANALISTA      = "Analista"
-$ROTULO_DEPLOY        = "Deploy"
-$ROTULO_TAREFA        = "Tarefa"
-$ROTULO_IMPLEMENTACAO = "Implementação"
-$COLUNA_OBJETO        = "Objeto"
-$COLUNA_ATIVIDADE     = "Atividade"
+# Rótulos do bloco gerado.
+# Sem acentos: o PowerShell 5.1 le .ps1 como ANSI quando o arquivo não tem BOM,
+# e literais acentuados sairiam corrompidos. Para acentuar os rótulos, salve
+# este .ps1 como UTF-8 com BOM.
+$ROTULO_ANALISTA  = "Analista"
+$ROTULO_DEPLOY    = "Deploy"
+$ROTULO_TAREFA    = "Tarefa"
+$COLUNA_OBJETO    = "Objeto"
+$COLUNA_OBJETIVO  = "Objetivo"
+$COLUNA_ATIVIDADE = "Atividade"
 
-# Separador da tabela, copiado do CHANGELOG.md para não sujar o diff.
-$SEPARADOR_TABELA = "|--------|-----------|"
+# Valores aceitos em "objetivo".
+$OBJETIVOS_VALIDOS = @("feature","release","bugfix","hotfix")
 
-# Valores aceitos em "implementação". Espelha lib.implementações do LibraryFile.
-$IMPLEMENTACOES_VALIDAS = @("feature","release","bugfix","hotfix")
+# Ordem dos resultados dentro de cada versão.
+$ORDEM_RESULTADOS = @("Adicionado","Alterado","Descontinuado","Removido","Corrigido","Seguranca")
 
-# Ordem das seções dentro de cada versão. Espelha a tabela "Tipos de Mudanças
-# Previstas" do CHANGELOG.md.
-$RESULTADOS_VALIDOS = @("Adicionado","Alterado","Descontinuado","Removido","Corrigido","Segurança")
-
-# Valores aceitos em "resultado". Chave em minúsculas; aceita com e sem cedilha.
+# Valores aceitos em "resultado". Chave em minúsculas, sem acento.
 $MAPA_RESULTADO = @{
     "adicionado"    = "Adicionado"
     "alterado"      = "Alterado"
     "descontinuado" = "Descontinuado"
     "removido"      = "Removido"
     "corrigido"     = "Corrigido"
-    "segurança"     = "Segurança"
-    "seguranca"     = "Segurança"
+    "seguranca"     = "Seguranca"
 }
 
 # ---------------------------------------------------------------------------
-# Funções auxiliares
+# Funcoes auxiliares
 # ---------------------------------------------------------------------------
 
 function Get-RaizRepo {
@@ -127,7 +120,7 @@ function Get-RaizRepo {
 
 function Resolve-CaminhoRepo {
     # Caminho relativo resolvido contra a raiz do repositório; não achando ali,
-    # tenta o diretório atual.
+    # tenta o diretorio atual.
     param([string] $caminho)
 
     if ([System.IO.Path]::IsPathRooted($caminho)) { return $caminho }
@@ -143,17 +136,9 @@ function Resolve-CaminhoRepo {
     return $caminho
 }
 
-function Test-TemCampo {
-    # A CHAVE EXISTE no JSON? Distinto de "tem valor".
-    # A regra do modelo é: só a AUSÊNCIA herda da raiz. Presente e vazio é erro.
-    param($obj, [string] $nome)
-    if ($null -eq $obj) { return $false }
-    return ($obj.PSObject.Properties.Name -contains $nome)
-}
-
 function Get-Campo {
-    # Lê uma propriedade que pode não existir ou vir vazia; devolve $null nos dois casos.
-    # Para distinguir ausência de vazio, combine com Test-TemCampo.
+    # Le uma propriedade que pode não existir ou vir vazia.
+    # String vazia e ausência são tratadas do mesmo jeito, por decisão do modelo.
     param($obj, [string] $nome)
     if ($null -eq $obj) { return $null }
     if ($obj.PSObject.Properties.Name -notcontains $nome) { return $null }
@@ -162,6 +147,22 @@ function Get-Campo {
     $v = "$v".Trim()
     if ([string]::IsNullOrWhiteSpace($v)) { return $null }
     return $v
+}
+
+function Get-ObjetivoDaBranch {
+    # Ultimo recurso: deduz do prefixo da branch atual.
+    try {
+        $branch = (git rev-parse --abbrev-ref HEAD 2>$null)
+    } catch {
+        return $null
+    }
+    if ([string]::IsNullOrWhiteSpace($branch)) { return $null }
+    $branch = "$branch".Trim()
+    if ($branch -notmatch '/') { return $null }
+
+    $prefixo = $branch.Split('/')[0].ToLower()
+    if ($OBJETIVOS_VALIDOS -contains $prefixo) { return $prefixo }
+    return $null
 }
 
 function Get-NomeObjeto {
@@ -178,7 +179,7 @@ function ConvertTo-CelulaSegura {
 }
 
 function Get-ChaveTag {
-    # vAAAA.MM.DD.SQ -> número comparável. Evita comparação textual, onde
+    # vAAAA.MM.DD.SQ -> numero comparável. Evita comparação textual, onde
     # "v2026.08.24.10" viria antes de "v2026.08.24.06".
     param([string] $t)
     $m = [regex]::Match($t, '^v?(\d{4})\.(\d{2})\.(\d{2})\.(\d+)$')
@@ -190,7 +191,7 @@ function Get-ChaveTag {
 }
 
 # ---------------------------------------------------------------------------
-# Localização dos arquivos
+# Localizacao dos arquivos
 # ---------------------------------------------------------------------------
 
 if (-not $Planning) {
@@ -203,10 +204,10 @@ $Planning  = Resolve-CaminhoRepo $Planning
 $Changelog = Resolve-CaminhoRepo $Changelog
 
 if (-not (Test-Path $Planning)) {
-    throw "Planejamento não encontrado: $Planning`nInforme -Planning com o caminho completo."
+    throw "Planejamento nao encontrado: $Planning`nInforme -Planning com o caminho completo."
 }
 if (-not (Test-Path $Changelog)) {
-    throw "CHANGELOG não encontrado: $Changelog`nInforme -Changelog com o caminho completo."
+    throw "CHANGELOG nao encontrado: $Changelog`nInforme -Changelog com o caminho completo."
 }
 
 # ---------------------------------------------------------------------------
@@ -217,115 +218,109 @@ try {
     $plan = Get-Content -Path $Planning -Raw -Encoding UTF8 | ConvertFrom-Json
 } catch {
     throw "JSON inválido em: $Planning`n$($_.Exception.Message)`n" +
-          "Verifique vírgulas faltando entre os campos e aspas desbalanceadas na linha indicada."
+          "Verifique virgulas faltando entre os campos e aspas desbalanceadas na linha indicada."
 }
 
 $tag = Get-Campo $plan 'tag'
-if (-not $tag) { throw "O planejamento não possui o campo 'tag'." }
+if (-not $tag) { throw "O planejamento nao possui o campo 'tag'." }
 
 if ($null -eq (Get-ChaveTag $tag)) {
-    Write-Warning "A tag '$tag' não segue o formato vAAAA.MM.DD.SQ."
+    Write-Warning "A tag '$tag' nao segue o formato vAAAA.MM.DD.SQ."
 }
 
 $autor    = Get-Campo $plan 'autor'
 $dataPlan = Get-Campo $plan 'data'
 $tarefa   = Get-Campo $plan 'tarefa'
 
-if (-not $autor)  { throw "O planejamento não possui o campo 'autor'." }
-if (-not $tarefa) { throw "O planejamento não possui o campo 'tarefa'." }
+if (-not $autor)  { throw "O planejamento nao possui o campo 'autor'." }
+if (-not $tarefa) { throw "O planejamento nao possui o campo 'tarefa'." }
 
 $objetos = @($plan.objetos)
-if ($objetos.Count -eq 0) { throw "O planejamento não possui objetos." }
+if ($objetos.Count -eq 0) { throw "O planejamento nao possui objetos." }
 
-# ---------------------------------------------------------------------------
-# Parâmetros da raiz
-#
-# Regra do modelo:
-#   implementação -> obrigatória, válida SOMENTE na raiz
-#   resultado     -> obrigatória na raiz como valor genérico; cada objeto pode sobrepor
-# ---------------------------------------------------------------------------
-
-$implementacao = Get-Campo $plan 'implementacao'
-if (-not $implementacao) {
-    throw "O planejamento não possui o campo 'implementacao' na raiz. " +
-          "Aceitos: $($IMPLEMENTACOES_VALIDAS -join ', ')."
-}
-$implementacao = $implementacao.ToLower()
-if ($IMPLEMENTACOES_VALIDAS -notcontains $implementacao) {
-    throw "Valor inválido em 'implementação': '$implementacao'. " +
-          "Aceitos: $($IMPLEMENTACOES_VALIDAS -join ', ')."
-}
-
+# Preenchidos na raiz: valem para TODOS os objetos e ignoram o valor individual.
+$objetivoRaiz  = Get-Campo $plan 'objetivo'
 $resultadoRaiz = Get-Campo $plan 'resultado'
-if (-not $resultadoRaiz) {
-    throw "O planejamento não possui o campo 'resultado' na raiz. " +
-          "Aceitos: $($RESULTADOS_VALIDOS -join ', ')."
-}
-if (-not $MAPA_RESULTADO.ContainsKey($resultadoRaiz.ToLower())) {
-    throw "Valor inválido em 'resultado' na raiz: '$resultadoRaiz'. " +
-          "Aceitos: $($RESULTADOS_VALIDOS -join ', ')."
-}
 
 # ---------------------------------------------------------------------------
-# Normalização dos objetos
+# Normalizacao dos objetos
 # ---------------------------------------------------------------------------
 
 $itens = @()
-$sobrepostos = @()
-$implementacaoNoObjeto = @()
+$ignoradosResultado = @()
+$ignoradosObjetivo = @()
+$objetivosForaDoPadrao = @()
 
 foreach ($obj in $objetos) {
     $nome = Get-NomeObjeto (Get-Campo $obj 'nome')
     if (-not $nome) { throw "Há objeto sem o campo 'nome' no planejamento." }
 
-    # 'implementação' vale somente na raiz; no objeto é ignorada, com aviso.
-    if (Test-TemCampo $obj 'implementacao') {
-        $implementacaoNoObjeto += $nome
+    $objetivoObj  = Get-Campo $obj 'objetivo'
+    $resultadoObj = Get-Campo $obj 'resultado'
+
+    # Regra do modelo: a raiz, quando preenchida, prevalece sobre o objeto.
+    if ($objetivoRaiz) {
+        if ($objetivoObj -and $objetivoObj.ToLower() -ne $objetivoRaiz.ToLower()) {
+            $ignoradosObjetivo += "$nome ('$objetivoObj')"
+        }
+        $objetivo = $objetivoRaiz
+    } else {
+        $objetivo = $objetivoObj
     }
 
-    # Cascata: a presença da chave no objeto SOBREPÕE a raiz.
-    # Ausência herda. Presente porém vazia é erro, nunca herança silenciosa.
-    if (Test-TemCampo $obj 'resultado') {
-        $resultadoObj = Get-Campo $obj 'resultado'
-        if (-not $resultadoObj) {
-            throw "Objeto '$nome': campo 'resultado' presente porém vazio. " +
-                  "Para herdar o valor da raiz, remova a chave do JSON."
+    if (-not $objetivo) { $objetivo = Get-ObjetivoDaBranch }
+    if (-not $objetivo) {
+        throw "Objeto '$nome' sem 'objetivo', ausente tambem na raiz e nao deduzido da branch."
+    }
+    $objetivo = $objetivo.ToLower()
+    if ($OBJETIVOS_VALIDOS -notcontains $objetivo) {
+        $objetivosForaDoPadrao += "$nome -> '$objetivo'"
+    }
+
+    if ($resultadoRaiz) {
+        if ($resultadoObj -and $resultadoObj.ToLower() -ne $resultadoRaiz.ToLower()) {
+            $ignoradosResultado += "$nome ('$resultadoObj')"
         }
-        $resultadoBruto = $resultadoObj
-        $sobrepostos += "$nome ('$resultadoObj')"
-    } else {
         $resultadoBruto = $resultadoRaiz
+    } else {
+        $resultadoBruto = $resultadoObj
+    }
+
+    if (-not $resultadoBruto) {
+        throw "Objeto '$nome' sem 'resultado', e a raiz tambem esta vazia. Aceitos: $($ORDEM_SECOES -join ', ')."
     }
 
     $chave = $resultadoBruto.ToLower()
     if (-not $MAPA_RESULTADO.ContainsKey($chave)) {
-        throw "Valor inválido em 'resultado' para '$nome': '$resultadoBruto'. " +
-              "Aceitos: $($RESULTADOS_VALIDOS -join ', ')."
+        throw "Valor invalido em 'resultado' para '$nome': '$resultadoBruto'. Aceitos: $($ORDEM_SECOES -join ', ')."
     }
     $resultado = $MAPA_RESULTADO[$chave]
 
     $atividade = Get-Campo $obj 'atividade'
     if (-not $atividade) {
-        Write-Warning "Objeto '$nome' sem o campo 'atividade'. A célula ficará vazia."
+        Write-Warning "Objeto '$nome' sem o campo 'atividade'. A celula ficara vazia."
     }
 
     $itens += [pscustomobject]@{
         Nome      = ConvertTo-CelulaSegura $nome
         Atividade = ConvertTo-CelulaSegura $atividade
+        Objetivo  = ConvertTo-CelulaSegura $objetivo
         Resultado = $resultado
     }
 }
 
-if ($implementacaoNoObjeto.Count -gt 0) {
-    Write-Warning ("'implementacao' vale somente na raiz e foi ignorada em: " +
-                   "$($implementacaoNoObjeto -join ', ').")
+if ($ignoradosObjetivo.Count -gt 0) {
+    Write-Warning "'objetivo' da raiz ('$objetivoRaiz') prevaleceu; ignorado no objeto: $($ignoradosObjetivo -join '; ')."
 }
-if ($sobrepostos.Count -gt 0) {
-    Write-Host "Resultado da raiz ('$resultadoRaiz') sobreposto em: $($sobrepostos -join '; ')."
+if ($objetivosForaDoPadrao.Count -gt 0) {
+    Write-Warning "Valor fora do padrao em 'objetivo': $($objetivosForaDoPadrao -join '; '). Aceitos: $($OBJETIVOS_VALIDOS -join ', ')."
+}
+if ($ignoradosResultado.Count -gt 0) {
+    Write-Warning "'resultado' da raiz ('$resultadoRaiz') prevaleceu; ignorado no objeto: $($ignoradosResultado -join '; ')."
 }
 
 # ---------------------------------------------------------------------------
-# Modo revert: anota a reversão na entrada da tag já registrada
+# Modo revert: anota a reversao na entrada da tag ja registrada
 # ---------------------------------------------------------------------------
 
 if ($Revert) {
@@ -334,20 +329,20 @@ if ($Revert) {
     $conteudo = Get-Content -Path $Changelog -Raw -Encoding UTF8
     $eol = if ($conteudo.Contains("`r`n")) { "`r`n" } else { "`n" }
 
-    # A entrada da tag precisa existir: o revert anota, não cria.
+    # A entrada da tag precisa existir: o revert anota, nao cria.
     $cab = [regex]::Match($conteudo, '(?m)^##\s*\[' + [regex]::Escape($tag) + '\]')
     if (-not $cab.Success) {
-        throw "A tag $tag não consta no CHANGELOG. Registre o deploy antes de registrar o revert."
+        throw "A tag $tag nao consta no CHANGELOG. Registre o deploy antes de registrar o revert."
     }
 
-    # Delimita o bloco da tag, para não anotar a entrada errada.
+    # Delimita o bloco da tag, para nao anotar a entrada errada.
     $depois = $conteudo.Substring($cab.Index)
     $prox = [regex]::Match($depois.Substring(1), '(?m)^##\s*\[')
     $fimBloco = if ($prox.Success) { $cab.Index + 1 + $prox.Index } else { $conteudo.Length }
     $blocoTag = $conteudo.Substring($cab.Index, $fimBloco - $cab.Index)
 
     if ($blocoTag -match [regex]::Escape($MARCA_REVERT)) {
-        Write-Host "A tag $tag já está marcada como revertida. Nada a fazer." -ForegroundColor Yellow
+        Write-Host "A tag $tag ja esta marcada como revertida. Nada a fazer." -ForegroundColor Yellow
         return
     }
 
@@ -366,7 +361,7 @@ if ($Revert) {
         return
     }
 
-    # Insere logo antes da primeira seção da tag, após os metadados.
+    # Insere logo antes da primeira secao da tag, apos os metadados.
     $secao = [regex]::Match($blocoTag, '(?m)^###\s')
     if ($secao.Success) {
         $posIns = $cab.Index + $secao.Index
@@ -386,15 +381,11 @@ if ($Revert) {
     Write-Host "Revert da tag $tag registrada no CHANGELOG." -ForegroundColor Green
     Write-Host ""
     Write-Host "Confira o resultado antes de commitar: git diff $Changelog"
-    Write-Host ""
     return
 }
 
 # ---------------------------------------------------------------------------
 # Montagem do bloco
-#
-# O formato abaixo espelha exatamente a entrada já existente no CHANGELOG.md:
-#   metadados sem colchetes, seções sem colchetes, tabela de duas colunas.
 # ---------------------------------------------------------------------------
 
 if (-not $DataDeploy) { $DataDeploy = $dataPlan }
@@ -405,21 +396,20 @@ $sb = [System.Text.StringBuilder]::new()
 [void]$sb.AppendLine("")
 [void]$sb.AppendLine("**${ROTULO_ANALISTA}:** $autor$QUEBRA_LINHA")
 [void]$sb.AppendLine("**${ROTULO_DEPLOY}:** $DataDeploy$QUEBRA_LINHA")
-[void]$sb.AppendLine("**${ROTULO_TAREFA}:** $tarefa$QUEBRA_LINHA")
-[void]$sb.AppendLine("**${ROTULO_IMPLEMENTACAO}:** $implementacao")
+[void]$sb.AppendLine("**${ROTULO_TAREFA}:** $tarefa")
 
-foreach ($secao in $RESULTADOS_VALIDOS) {
+foreach ($secao in $ORDEM_SECOES) {
     $doGrupo = @($itens | Where-Object { $_.Resultado -eq $secao })
     if ($doGrupo.Count -eq 0) { continue }
 
     [void]$sb.AppendLine("")
-    [void]$sb.AppendLine("### $secao")
+    [void]$sb.AppendLine("### [$secao]")
     [void]$sb.AppendLine("")
-    [void]$sb.AppendLine("| $COLUNA_OBJETO | $COLUNA_ATIVIDADE |")
-    [void]$sb.AppendLine($SEPARADOR_TABELA)
+    [void]$sb.AppendLine("| $COLUNA_OBJETO | $COLUNA_OBJETIVO | $COLUNA_ATIVIDADE |")
+    [void]$sb.AppendLine("|--------|----------|-----------|")
 
     foreach ($i in $doGrupo) {
-        [void]$sb.AppendLine("| ``$($i.Nome)`` | $($i.Atividade) |")
+        [void]$sb.AppendLine("| ``$($i.Nome)`` | $($i.Objetivo) | $($i.Atividade) |")
     }
 }
 
@@ -440,7 +430,7 @@ $conteudo = Get-Content -Path $Changelog -Raw -Encoding UTF8
 
 # Idempotência: reexecução não duplica a entrada.
 if ($conteudo -match [regex]::Escape("## [$tag]")) {
-    Write-Host "A tag $tag já consta no CHANGELOG. Nada a fazer." -ForegroundColor Yellow
+    Write-Host "A tag $tag ja consta no CHANGELOG. Nada a fazer." -ForegroundColor Yellow
     return
 }
 
