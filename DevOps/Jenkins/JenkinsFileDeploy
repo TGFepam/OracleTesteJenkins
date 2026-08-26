@@ -202,6 +202,7 @@ pipeline {
                 script {
                     echo lib.line('Início do Processamento dos Parâmetros do Planejamento Para Deploy')
                     String usuario
+                    String local
 
                     // Valida a Tag selecionada com a Tag do planejamento
                     if (jsonPlan.tag != Tag) {
@@ -265,9 +266,14 @@ pipeline {
                     acao.listarInvalidos.executar   = jsonPlan.acoes.listarInvalidos
                     acao.recompilarObjetos.executar = jsonPlan.acoes.recompilarObjetos
 
-                    // Valida o parâmetro "realizado"
-                    if (!jsonPlan.realizado.toLowerCase() in lib.realizacoes) {
-                        error lib.status['E', "Parâmetro 'realizado' inválido: ${jsonPlan.realizado.toLowerCase()}"]
+                    // Valida o parâmetro "implementacao": sempre deve estar definido na raiz e somente na raiz
+                    if (!(jsonPlan.implementacao.toLowerCase() in lib.implementacoes)) {
+                        error lib.status('E', "Parâmetro da implementação inválido: ${jsonPlan.implementacao.toLowerCase()}")
+                    }
+
+                    // Valida o parâmetro "resultado": definido o valor genérico na raiz e, se for o caso, específico nos objetos
+                    if (!(jsonPlan.resultado.toLowerCase() in lib.resultados)) {
+                        error lib.status('E', "Parâmetro do resultado inválido: ${jsonPlan.resultado.toLowerCase()}")
                     }
 
                     texto = [
@@ -277,7 +283,8 @@ pipeline {
                         lib.text("Data: ${jsonPlan.data}"),
                         lib.text("Tarefa: ${jsonPlan.tarefa}"),
                         lib.text("Tag: ${jsonPlan.tag}"),
-                        lib.text("Realizado: ${jsonPlan.realizado}"),
+                        lib.text("Implementação: ${jsonPlan.implementacao}"),
+                        lib.text("Resultado: ${jsonPlan.resultado}"),
                         lib.text(''),
                         lib.text('Ações Planejadas'),
                         lib.text("Matar sessões: ${jsonPlan.acoes.matarSessoes ? 'SIM' : 'NÃO'}"),
@@ -317,9 +324,12 @@ pipeline {
                         }
                         echo lib.line("Script: ${diretorioRaiz}/${obj.nome}")
 
-                        // Valida o parâmetro mudanca
-                        if (!obj.mudanca.toLowerCase() in lib.mudancas) {
-                            error lib.status['E', "Parâmetro 'mudanca' inválido: ${jsonPlan.mudanca.toLowerCase()}"]
+                        // Valida o parâmetro resultado, caso tenha um específico para o objeto
+                        if (obj.containsKey('resultado')) {
+                            if (!(obj.resultado.toLowerCase() in lib.resultados)) {
+                                error lib.status('E', "Parâmetro resultado do objeto inválido: ${obj.resultado.toLowerCase()}")
+                            }
+                            echo lib.line("Resultado: ${obj.resultado.toLowerCase()}")
                         }
 
                         echo lib.line('Verifica encoding do script')
@@ -384,7 +394,7 @@ pipeline {
 
                         texto = [
                             lib.text("Arquivo: ${diretorioRaiz}/${obj.nome}"),
-                            lib.text("Descrição: ${obj.descricao}")
+                            lib.text("Atividade: ${obj.atividade}")
                         ]
                         echo lib.writeText(texto)
 
