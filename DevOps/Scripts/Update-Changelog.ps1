@@ -71,7 +71,7 @@ $ErrorActionPreference = "Stop"
 # Vazio: a maioria dos visualizadores já quebra na linha simples, e um "<br>"
 # aqui produziria uma segunda quebra, com espaçamento duplo.
 # Se o seu renderizador juntar os campos numa linha só, use "<br>".
-$QUEBRA_LINHA = ""
+$QUEBRA_LINHA = "<br>"
 
 # Texto usado para marcar e detectar uma tag revertida.
 $MARCA_REVERT = "Revertido"

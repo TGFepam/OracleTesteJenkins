@@ -45,3 +45,24 @@ Alterações em desenvolvimento, possívelmente já mergeadas na branch **`main`
 | `vw_clientes_ativos.sql` | bugfix | Tiago Gabriel | remoção de `DISTINCT` desnecessário que causava full scan em `tb_cliente`. |
 
 ---
+
+## [v2026.08.25.01] - 2026-08-25
+
+**Analista:** Tiago Gabriel<br>
+**Deploy:** 2026-08-25<br>
+**Tarefa:** Criação de package de teste para o Jenkins<br>
+**Implementação:** feature
+
+### Adicionado
+
+| Objeto | Atividade |
+|--------|-----------|
+| `pck_teste_jenkins.pck` | Criar package para testes no Jenkins |
+
+### Corrigido
+
+| Objeto | Atividade |
+|--------|-----------|
+| `pck_teste_validacao.pck` | Corrigir package para testes para validação |
+
+---
