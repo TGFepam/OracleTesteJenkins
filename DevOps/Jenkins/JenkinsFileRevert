@@ -330,12 +330,12 @@ pipeline {
                         echo lib.line('Verifica encoding do script')
                         lib.validateScriptEncoding("${diretorioRaiz}/${obj.nome}")
 
-                        if (jsonConf.validateScript[Database]) {
+                        if (jsonConf.validarScripts[Database]) {
                             echo lib.line('Verifica caracteres inválidos no script')
                             lib.validateScriptCharacters("${diretorioRaiz}/${obj.nome}")
                         }
                     }
-                    if (!jsonConf.validateScript[Database]) {
+                    if (!jsonConf.validarScripts[Database]) {
                         echo lib.status('A', 'Verificação de caracteres inválidos no script está desabilitada nos parâmetros')
                     }
                     echo lib.line('Final da Validação dos Objetos Planejados Para Revert')
