@@ -368,7 +368,7 @@ pipeline {
                             if (jsonConf.valoresValidos.tipoMudanca[obj.tipoMudanca]) {
                                 texto << "Tipo de Mudança: ${obj.tipoMudanca}"
                             } else {
-                                error lib.status('E', "Tipo de Mudança do objeto inválida: '${obj.tipoMudanca}' Informar: ${jsonConf.valoresValidos.tipoMudanca.keySet().join(', ')}"
+                                error lib.status('E', "Tipo de Mudança do objeto inválida: '${obj.tipoMudanca}' Informar: ${jsonConf.valoresValidos.tipoMudanca.keySet().join(', ')}")
                             }
                         }
 
