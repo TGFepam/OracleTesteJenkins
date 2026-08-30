@@ -3,24 +3,28 @@
         "descricao": "Produção",
         "enderecoIP": "10.92.2.66",
         "porta": "1521",
-        "serviceName": "fprod"
+        "serviceName": "fprod",
+        "aceitaDeploy": true
     },
     "homologa": {
         "descricao": "Homologação",
         "enderecoIP": "10.92.2.65",
         "porta": "1521",
-        "serviceName": "homologa"
-    },
-    "fepdev": {
-        "descricao": "Desenvolvimento",
-        "enderecoIP": "10.92.2.65",
-        "porta": "1521",
-        "serviceName": "fepdev"
+        "serviceName": "homologa",
+        "aceitaDeploy": true
     },
     "hmlforms": {
         "descricao": "Forms 12c",
         "enderecoIP": "10.92.2.65",
         "porta": "1521",
-        "serviceName": "hmlforms"
+        "serviceName": "hmlforms",
+        "aceitaDeploy": false
+    },
+    "fepdev": {
+        "descricao": "Desenvolvimento",
+        "enderecoIP": "10.92.2.65",
+        "porta": "1521",
+        "serviceName": "fepdev",
+        "aceitaDeploy": false
     }
 }

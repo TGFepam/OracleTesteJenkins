@@ -17,32 +17,6 @@ Map log = [
 
 
 /*--------------------------------------------------
-    Variável das realizações previstas
---------------------------------------------------*/
-@Field
-List<String> implementacoes = [
-    'feature',
-    'release',
-    'bugfix',
-    'hotfix'
-]
-
-
-/*--------------------------------------------------
-    Variável das mudanças previstas
---------------------------------------------------*/
-@Field
-List<String> resultados = [
-    'adicionado',
-    'alterado',
-    'descontinuado',
-    'removido',
-    'corrigido',
-    'segurança'
-]
-
-
-/*--------------------------------------------------
     Variável dos tipos de objeto com check de erros
 --------------------------------------------------*/
 @Field
@@ -222,7 +196,7 @@ String runScript(String script, String connection, String objectType = '') {
 --------------------------------------------------*/
 String line(String line) {
     if (!line) {
-        return
+        return ''
     }
     addLogLine(line)
     return line
@@ -246,7 +220,7 @@ String text(String line) {
 --------------------------------------------------*/
 String writeText(List text) {
     if (!text) {
-        return
+        return ''
     }
     flushLogText()
     return text.join('\n')
@@ -262,7 +236,7 @@ String status(String status, String line) {
         line   -> Texto da linha a ser colocado na console
     */
     if (!line) {
-        return
+        return ''
     }
     String message
 
@@ -309,7 +283,6 @@ String getBuildStarter() {
                 break
             case c instanceof org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper:
                 return 'Outro job'
-                break
             default:
                 result << c.toString()
                 break
@@ -473,6 +446,8 @@ void finishLog(Map args) {
     String action          = args.action
     String database        = args.database
     String tag             = args.tag
+    String categoria       = args.categoria
+    String tipoMudanca     = args.tipoMudanca
     String buildNumber     = args.buildNumber
     String status          = args.status
     boolean packageParcial = args.packageParcial
@@ -491,6 +466,8 @@ void finishLog(Map args) {
     }
     log.text << "Database : ${database}"
     log.text << "Tag      : ${tag}"
+    log.text << "Categoria: ${categoria}"
+    log.text << "Mudança  : ${tipoMudanca}"
     log.text << "Build #  : ${buildNumber}"
     log.text << "Timestamp: ${timestamp}"
     log.text << '------------------------------'

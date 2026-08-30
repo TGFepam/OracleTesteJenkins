@@ -104,12 +104,20 @@ OracleDatabase_CI_CD  → Diretório raiz do repositório
 3. Adicionar/atualizar os objetos correspondentes em **`Deploy/<TipoDoObjeto>/`**;
 4. Criar sempre o script de reversão necessário em **`Revert/<TipoDoObjeto>/`**;
 5. Gerar os arquivos de planejamento em **`DevOps/Plannings/`**, **sempre os dois arquivos**;
+6. Na branch criada, acessar o diretório **`DevOps/Plannings/`**
+
+
+
 6. Abrir um **Pull Request** descrevendo a alteração efetuada, referenciando uma breve descrição e sempre que possível o card/ticket (ex.: **`FP-12345`**, **`CS-67890`**);
-7. Após a aprovação e merge do **Pull Request**, executar um **`PULL`** na branch **`main`** para atualização antes de gerar a tag e criar a tag com a data corrente e o sequencial e não a data prevista para o deploy, para mantrer a cronologia: o Jenkins assume a publicação nos ambientes;
+7. Após a aprovação e merge do **Pull Request**, executar um **`PULL`** na branch **`main`** para atualização antes de gerar a tag e criar a tag com a data corrente e o sequencial e não a data prevista para o deploy, para manter a cronologia: o Jenkins assume a publicação nos ambientes;
 8. Atualizar o [CHANGELOG.md](CHANGELOG.md) com os dados da tag e as informações da entrega realizada;
-   - Foi criado um script do PowerShell que atualiza automaticamente o [CHANGELOG.md](CHANGELOG.md) com os dados do arquivo de planejamento de deploy: Para a correta execução será necessário alterar o formato dos arquivos de planejamento **`Planning_Deploy.json`** e **`Pnanning_Revert.json`**;
-   - Foram adicionados dois parâmetros em cada arquivo com informações necessárias para a correta e completa informação no [CHANGELOG.md](CHANGELOG.md);
-   - Inicialmente estas configurações estão em ambiente de testes controlado para validação e após o devido detalhamento será implementado em produção.
+   - Foi criado um script do PowerShell que faz a atualização automaticamente do [CHANGELOG.md](CHANGELOG.md) com os dados do arquivo de planejamento de deploy.
+
+> [!IMPORTANT]
+>
+> ### Informações do Planning_Deploy.json
+>
+> Para que informações corretas e detalhadas das alterações efetuadas no banco da dados sejam inseridas no [CHANGELOG.md](CHANGELOG.md) é imprescindível que o arquivo de planejamento do deploy seja preenchido da melhor e mais detalhada forma possível, restando apenas a execução de um script para a atualização das informações.
 
 ---
 
@@ -121,7 +129,7 @@ OracleDatabase_CI_CD  → Diretório raiz do repositório
    - **`pr_`** para procedures;
    - **`pck_`** para packages, e assim por diante;
 - **Tags de deploy**: formato **`vAAAA.MM.DD.SQ`**, onde **`SQ`** é o sequencial da tag dentro do mesmo dia;
-- **Changelog**: baseado no padrão [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/), com o versionamento por data no formato da tag (`vAAAA.MM.DD.SQ`);
+- **Changelog**: baseado no padrão [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), com o versionamento por data no formato da tag (`vAAAA.MM.DD.SQ`);
 - **Rastreabilidade**: toda alteração (branch) deve ter o correto prefixo (**`feature`** / **`release`** / **`bugfix`** ou **`hotfix`**) conforme for o caso, acompanhado de uma breve descrição, sempre em letras minúsculas e, sempre que possível, referenciando o card da demanda (ex.: **`FP-9102`**) ou o chamado de suporte (ex.: **`CS-54321`**).
 
 ---
