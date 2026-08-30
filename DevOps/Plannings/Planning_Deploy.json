@@ -1,24 +1,24 @@
 {
-    "autor": "Tiago Gabriel",
-    "data": "2026-08-25",
-    "tarefa": "Criação de package de teste para o Jenkins",
+    "responsavel": "Tiago Gabriel",
+    "dataPlano": "2026-08-25",
+    "escopo": "Criação de package de teste para o Jenkins",
     "tag": "v2026.08.25.01",
-    "implementacao": "feature",
-    "resultado": "Corrigido",
+    "categoria": "feature",
+    "tipoMudanca": "Corrigido",
     "acoes": {
         "matarSessoes": false,
         "listarInvalidos": true,
-        "recompilarObjetos": true
+        "compilarObjetos": true
     },
     "objetos": [
         {
             "nome": "Packages/pck_teste_jenkins.pck",
-            "atividade": "Criar package para testes no Jenkins",
-            "resultado": "Adicionado"
+            "implementado": "Criar package para testes no Jenkins",
+            "tipoMudanca": "Adicionado"
         },
         {
             "nome": "Packages/pck_teste_validacao.pck",
-            "atividade": "Corrigir package para testes para validação"
+            "implementado": "Corrigir package para testes para validação"
         }
     ]
 }
