@@ -1,4 +1,3 @@
-
 # Changelog
 
 ### Todas as alterações significativas e relevantes deste repositório são documentadas neste arquivo.
@@ -7,9 +6,15 @@ O formato deste arquivo é baseado no padrão [Keep a Changelog](https://keepach
 
 Aqui será feito o registro de alterações, versões e objetos publicados em ambiente de produção. Os registros são lançados ordenados do mais atual ao mais antigo, estando o mais atual sempre no topo do arquivo.
 
+### Detalhes
+
 - Cada nova versão deve ser adicionada como uma nova seção com os dados do **Tipo de Categoria** realizado e o detalhamento dos objetos que serão publicados;
 - A versão também deverá conter o **Tipo de Mudança** do deploy geral para todos os objetos ou, se for o caso, o tipo específico de cada objeto implantado;
-- Use a seção **`[Não Publicado]`** para mudanças que estão em andamento no branch atual e que ainda não estão prontas para o processo de deploy;
+- Use a seção **`[Não Publicado]`** para mudanças que estão em andamento no branch atual e que ainda não estão prontas para o processo de deploy.
+
+> [!TIP]
+> 
+> A atualização deste arquivo pode ser feita através de um processo automatizado que utiliza um script que lê o arquivo **`Planning_Deploy.json`** e faz a transferência das informações.
 
 ---
 
@@ -48,11 +53,15 @@ Aqui será feito o registro de alterações, versões e objetos publicados em am
 
 ---
 
+## Início da Seção de Documentação de Alterações
+
 ## [Não Publicado]
 
 > [!NOTE]
 >
 > Listar aqui as alterações em desenvolvimento atualmente, mas ainda sem tag ou previsão para deploy.
+> 
+> Nesta seção cada objeto traz sua própria categoria e responsável, uma vez que convivem alterações de branches diferentes. Nas versões já publicadas esses dados são únicos para a tag e aparecem apenas no cabeçalho.
 
 Nesta seção cada objeto traz sua própria categoria e responsável, pois convivem alterações de branches diferentes. Nas versões já publicadas esses dados são únicos para a tag e aparecem apenas no cabeçalho.
 
@@ -75,6 +84,8 @@ Nesta seção cada objeto traz sua própria categoria e responsável, pois convi
 **Responsável:** Tiago Gabriel<br>
 **Escopo:** Criação de package de teste para o Jenkins<br>
 **Categoria:** feature
+
+---
 
 ### Adicionado
 
