@@ -262,12 +262,27 @@ DevOps            → Diretório base das configurações para a automação via
     "gerarLog": true,
     "consistirRevert": true,
     "validarScripts": {
-        "homologa": true,
-        "fprod": true
+        "fprod": true,
+        "homologa": true
     },
     "diretoriosRaiz": {
         "deploy": "Deploy",
         "revert": "Revert"
+    },
+    "tiposObjeto": {
+        "Functions": "function",
+        "Indexes": "index",
+        "Java": "java",
+        "Jobs": "job",
+        "Packages": "package",
+        "Procedures": "procedure",
+        "Schedules": "schedule",
+        "Scripts": "script",
+        "Sequences": "sequence",
+        "Synonyms": "synonym",
+        "Tables": "table",
+        "Triggers": "trigger",
+        "Views": "view"
     },
     "scripts": {
         "matarSessoes": "DevOps/Scripts/KillSessions.sql",
@@ -297,16 +312,17 @@ DevOps            → Diretório base das configurações para a automação via
 |-------|-----------|
 | `gerarLog` | Indica que deve ser gerado um arquivo de log durante o processo de aplicação dos objetos. |
 | `consistirRevert` | Indica que o arquivo de planejamento do revert deve ser consistido e validado no momento do deploy. |
-| `validarScripts.homologa` | Indica que os arquivos planejados para deploy na base de homologação deverão ser validados através de API referente à existência de caracteres inválidos no código. |
 | `validarScripts.fprod` | Indica que os arquivos planejados para deploy na base de produção deverão ser validados através de API referente à exist ,ê onde aância de caracteres inválidos no código. |
+| `validarScripts.homologa` | Indica que os arquivos planejados para deploy na base de homologação deverão ser validados através de API referente à existência de caracteres inválidos no código. |
 | `diretoriosRaiz.deploy` | Local do diretório raiz de deploy para os scripts a serem executados. |
 | `diretoriosRaiz.revert` | Local do diretório raiz de reversão para os scripts a serem executados. |
+| `tiposObjeto` | Tipos de objetos previstos para **Deploy** e **Revert**. O tipo é o identificador e o singular de cada um é o valor. |
 | `scripts.matarSessoes` | Local e nome do script utilizado para matar as sessões do banco de dados de acordo com o parâmetro. |
 | `scripts.listarInvalidos` | Local e nome do script de banco de dados para listar os objetos e artefatos inválidos após a aplicação. |
 | `scripts.compilarObjetos` | Local e nome do script de banco de dados para executar a compilação dos objetos inválidos no banco de dados após a aplicação. |
-| `valoresValidos` | Listas dos valores válidos dos parâmetros de **Planejamentos** e **Revert**. |
-| `valoresValidos.categoria` | Lista de todas as categorias válidas como parâmetros do processamento. |
-| `valoresValidos.tipoMudanca` | Lista de todos os tipos de mudança válidos como parâmetros da raiz dos planejamentos para todos os arquivos ou específicos de cada objeto planejado. |
+| `valoresValidos` | Listas dos valores válidos para os parâmetros dos planejamentos de **Deploy** e **Revert**. |
+| `valoresValidos.categoria` | Lista das categorias válidas para o processamento do planejamento. A categoria é o identificador e a descrição é o valor. |
+| `valoresValidos.tipoMudanca` | Lista dos tipos de mudança válidos como ação de todos os objetos quando informado na raiz ou específicos de cada objeto planejado. O tipo de mudança é o identificador e a descrição é o valor. |
 
 ---
 
