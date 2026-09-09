@@ -69,7 +69,7 @@ void validateScriptEncoding(String script) {
     //retCharset = sh(script: comando, returnStdout: true).trim().toUpperCase()
 
     //Comando para retorno do charset
-    cmdCharset = "file -bi ${script} | awk -F'charset=' '{print \$2}'"
+    cmdCharset = """file -bi "${script}" | awk -F'charset=' '{print \$2}'"""
     retCharset = sh(script: cmdCharset, returnStdout: true).trim().toUpperCase()
     // ASCII é um subset do UTF-8 e apenas indica um arquivo sem acentos ou caracteres especias
     if (retCharset in ['US-ASCII', 'UTF-8']) {
@@ -116,11 +116,11 @@ void validateScriptCharacters(String script) {
 
     if (httpResponse.status == 200) {
         texto = [
-            text("[SUCESSO] Validação dos caracteres do script com sucesso")
+            text("[SUCESSO]: Validação dos caracteres do script com sucesso")
         ]
     } else {
         texto = [
-            text("[ERRO] Validação dos caracteres do script com erro")
+            text("[ERRO]: Validação dos caracteres do script com erro")
         ]
     }
     texto << text("Status: ${httpResponse.status}")
@@ -282,7 +282,8 @@ String getBuildStarter() {
                 result << "Upstream job: ${c.getUpstreamProject()} #${c.getUpstreamBuild()}"
                 break
             case c instanceof org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper:
-                return 'Outro job'
+                result << 'Outro job'
+                break
             default:
                 result << c.toString()
                 break
