@@ -16,7 +16,7 @@
 
 ## Sobre o Projeto
 
-Este repositório centraliza os objetos de banco de dados **Oracle** (SQL e PL/SQL) utilizados pelas aplicações corporativas e as configurações do um pipeline de **CI/CD via Jenkins** responsável por automatizar os processos de **Deploy** e **Revert (rollback)** desses objetos entre os ambientes.
+Este repositório centraliza os objetos de banco de dados **Oracle** (SQL e PL/SQL) utilizados pelas aplicações corporativas e as configurações do pipeline de **CI/CD via Jenkins** responsável por automatizar os processos de **Deploy** e **Revert (rollback)** desses objetos entre os ambientes.
 
 O fluxo garante rastreabilidade, versionamento e segurança nas publicações, evitando alterações manuais diretas em produção.
 
@@ -76,7 +76,7 @@ OracleDatabase_CI_CD  → Diretório raiz do repositório
 1. Antes de qualquer operação, atualizar a branch **`main`** através de um **`pull`**;
 2. Criar uma branch de trabalho a partir de **`main`** (que deve sempre ser atualizada antes da criação), seguindo a convenção do prefixo definido no GitHub Flow de acordo com o tipo de desenvolvimento a ser realizado: **`feature`**, **`release`**, **`bugfix`** ou **`hotfix`**, que devem ser seguidos de uma barra (**/**) e de uma breve descrição, **sempre em letras minúsculas**, por ex.: **`feature/novo_calculo`** ou **`bugfix/erro_lancamento`**;
 3. Adicionar e/ou atualizar os objetos correspondentes nos diretórios do repositório de acordo com o tipo de objeto, em **`Deploy/<TipoDoObjeto>/`**;
-4. Sempre criar também também a estrutura necessária sendo scripts ou salvar os arquivos de reversão necessários para o caso de caso de erros no deploy em **`Revert/<TipoDoObjeto>/`** de acordo com o tipo de dado;
+4. Sempre criar também a estrutura necessária sendo scripts ou salvar os arquivos de reversão necessários para o caso de erros no deploy em **`Revert/<TipoDoObjeto>/`** de acordo com o tipo de dado;
 5. Criar os arquivos de planejamento para o **Deploy** e o **Revert** em **`DevOps/Plannings/`**, chamados **`Planning_Deploy.json`** e **`Planning_Revert.json`** com os dados de identificação e a relação dos objetos a serem aplicados; É imprescindível **sempre criar os dois arquivos** de planejamento;
 6. Identificar qual será a próxima **tag** a ser criada no repositório e incluir esta informação em ambos os arquivos de planejamento:
    - Dica de comando do PowerShell para identificar a próxima tag;
@@ -91,22 +91,22 @@ git tag --list "v$(Get-Date -Format 'yyyy.MM.dd').*" --sort=-v:refname
 7. Efetuar a atualização do [CHANGELOG.md](CHANGELOG.md) com as informações do desenvolvimento; **Detalhe:** esta atualização pode ser feita de forma automática com base nos dados do planejamento de deploy;
 8. Abrir um **Pull Request** descrevendo as alterações efetuadas, referenciando uma breve descrição e sempre que possível incluir a informação do card/ticket (ex.: **`FP-12345`**, **`CS-67890`**);
 9. Após a aprovação e o merge do **Pull Request**, executar um **`pull`** na branch **`main`** para atualização dos dados **antes de gerar a tag**;
-10. Criar a **tag** e com a data corrente e o sequencial e não a data prevista para o deploy para manter a cronologia;
-11. O Jenkins assume a publicação nos ambientes; com a data corrente e o sequencial e não a data prevista para o deploy, para manter a cronologia, no formato **`vAAAA.MM.DD.SQ`** onde **`SQ`** é a sequência da tag no dia;
+10. Criar a **tag** no formato **`vAAAA.MM.DD.SQ`** utilizando a data corrente **e não a data prevista para o deploy** para manter a cronologia e o identificador final **`SQ`** que é a sequência da **tag** no dia da criação;
+11. O Jenkins assume a publicação nos ambientes utilizando os dados da tag criada.
 
 > [!IMPORTANT]
 >
 > ### Informações do Planning_Deploy.json
 >
-> Para que informações corretas e detalhadas das alterações efetuadas no banco da dados sejam inseridas no [CHANGELOG.md](CHANGELOG.md) é imprescindível que o arquivo de planejamento do deploy seja preenchido da melhor e mais detalhada forma possível, restando apenas a execução de um script para a atualização das informações.
+> Para que informações corretas, detalhadas e descritivas das alterações efetuadas no banco de dados sejam inseridas no [CHANGELOG.md](CHANGELOG.md) é imprescindível que o arquivo de planejamento do deploy seja preenchido da melhor e mais detalhada forma possível, restando apenas a execução de um script para a atualização das informações.
 
 ---
 
 ## Os Arquivos de Planejamento
 
-Os arquivos de planejamento são arquivos no formato JSON. A estrutura de ambos os arquivos, de **Deploy** e de **Revert** é a mesma.
+Os arquivos de planejamento de **Deploy** e **Revert** dos objetos são arquivos no formato JSON com a mesma estrutura.
 
-**Importante:** Para que informações corretas e detalhadas das alterações efetuadas no banco da dados sejam inseridas no [CHANGELOG.md](CHANGELOG.md) é imprescindível que o arquivo de planejamento do deploy seja preenchido da melhor e mais detalhada forma possível, para que a atualização automática carregue dados significativos. Segue um arquivo de planejamento de exemplo:
+### Arquivo de exemplo:
 
 ```JSON
 {
@@ -177,6 +177,8 @@ Os arquivos de planejamento são arquivos no formato JSON. A estrutura de ambos 
 O pipeline do Jenkins depende de uma série de arquivos para configuração, implantação e funcionamento. Estes arquivos estão armazenados no repositório em um diretório específico:
 
 ```text
+Detalhe dos diretórios específicos da configuração do Jenkins
+
 DevOps            → Diretório base das configurações para a automação via Jenkins
 ├── HealthServer  → Jenkinsfiles de health check dos bancos de dados (HML/PRD)
 ├── Jenkins       → Jenkinsfiles de configuração dos pipelines e JSONs de parâmetros da operação
@@ -218,7 +220,7 @@ DevOps            → Diretório base das configurações para a automação via
 
 | Arquivo | Finalidade |
 |---------|------------|
-| `CompileObjects.sql` | Executa a compilaçãop dos objetos e artefatos inválidos do banco de dados após a aplicação dos objetos. |
+| `CompileObjects.sql` | Executa a compilação dos objetos e artefatos inválidos do banco de dados após a aplicação dos objetos. |
 | `KillSessions.sql` | Encerra as sessões ativas no banco de dados antes da execução dos scripts. |
 | `ListInvalids.sql` | Lista os objetos e artefatos que eventualmente tenham ficado inválidos após a publicação. |
 
@@ -227,13 +229,13 @@ DevOps            → Diretório base das configurações para a automação via
 > [!WARNING]
 > ### Restrição a arquivos
 >
-> Os arquivos localizaods em **`DevOps\HealthServer`**, **`DevOps/Jenkins/`** e **`DevOps/Scripts/`** são de uso interno para configuração do pipeline do Jenkins e **não devem ser alterados** manualmente.
+> Os arquivos localizados em **`DevOps/HealthServer`**, **`DevOps/Jenkins/`** e **`DevOps/Scripts/`** são de uso interno para configuração do pipeline do Jenkins e **não devem ser alterados** manualmente.
 
 ---
 
 ## Conteúdo dos Arquivos
 
-**`ConfigParam.json`**
+### ConfigParam.json
 ```JSON
 {
     "gerarLog": true,
@@ -272,22 +274,22 @@ DevOps            → Diretório base das configurações para a automação via
 
 | Campo | Descrição |
 |-------|-----------|
-| `geraLog` | Indica que deve ser gerado um arquivo de log durante o processo de aplicação dos objetos. |
+| `gerarLog` | Indica que deve ser gerado um arquivo de log durante o processo de aplicação dos objetos. |
 | `consistirRevert` | Indica que o arquivo de planejamento do revert deve ser consistido e validado no momento do deploy. |
-| `validarScripts.homologa` | Indica que os arquivos planejados para deploy na base de homologação deverão ser validados através de API referente à existância de caracteres inválidos no código. |
-| `validarScripts.fprod` | Indica que os arquivos planejados para deploy na base de produção deverão ser validados através de API referente à existância de caracteres inválidos no código. |
-| `diretorioRaiz.deploy` | Local do diretório raiz de deploy para os scripts a serem executados. |
-| `diretorioRaiz.revert` | Local do diretório raiz de reversão para os scripts a serem executados. |
-| `scripts.matarSessoes` | Local e nome do script utilizado para matrar as sessões do banco de dados de acordo com o parâmetro. |
-| `scripts.listarInvalidos` | Local e nome do script de banco de dados para listar os objetos e artefatos inválisod após a aplocação. |
-| `scripts.compilarObjetos` | Local e nome do script de banco de dados para execcutar a compilação dos objetos inválidos no banco de dados após a aplicação. |
+| `validarScripts.homologa` | Indica que os arquivos planejados para deploy na base de homologação deverão ser validados através de API referente à existência de caracteres inválidos no código. |
+| `validarScripts.fprod` | Indica que os arquivos planejados para deploy na base de produção deverão ser validados através de API referente à exist ,ê onde aância de caracteres inválidos no código. |
+| `diretoriosRaiz.deploy` | Local do diretório raiz de deploy para os scripts a serem executados. |
+| `diretoriosRaiz.revert` | Local do diretório raiz de reversão para os scripts a serem executados. |
+| `scripts.matarSessoes` | Local e nome do script utilizado para matar as sessões do banco de dados de acordo com o parâmetro. |
+| `scripts.listarInvalidos` | Local e nome do script de banco de dados para listar os objetos e artefatos inválidos após a aplocação. |
+| `scripts.compilarObjetos` | Local e nome do script de banco de dados para executar a compilação dos objetos inválidos no banco de dados após a aplicação. |
 | `valoresValidos` | Listas dos valores válidos dos parâmetros de **Planejamentos** e **Revert**. |
-| `categoria` | Lista de todas as categorias válidas como parâmetros do processamento. |
-| `tipoMudanca` | Lista de todos os tipos de mudança válidos como parâmetros da raiz dos planejamentos para todos os arquivois ou específicos de cada objeto planejado. |
+| `valoresValidos.categoria` | Lista de todas as categorias válidas como parâmetros do processamento. |
+| `valoresValidos.tipoMudanca` | Lista de todos os tipos de mudança válidos como parâmetros da raiz dos planejamentos para todos os arquivos ou específicos de cada objeto planejado. |
 
 ---
 
-**`ConfigParam.json`**
+### DatabaseParam.json
 ```JSON
 {
     "fprod": {
@@ -323,15 +325,15 @@ DevOps            → Diretório base das configurações para a automação via
 
 | Bancos | Descrição |
 |--------|-----------|
-| **`fprod`** | Banco de dados de preodução. |
-| **`homologa`** | Banco de daods de homologação. |
+| **`fprod`** | Banco de dados de produção. |
+| **`homologa`** | Banco de dados de homologação. |
 | **`hmlforms`** | Banco de dados de homologação do Forms 12c. |
 | **`fepdev`** | Banco de dados de desenvolvimento. |
 
 
 | Campos | Descrição |
 |--------|-----------|
-| `descricao` | Nome do banco de daodos. |
+| `descricao` | Nome do banco de dados. |
 | `enderecoIP` | Endereço IP do banco de dados. |
 | `porta` | Código da porta de acesso ao banco de dados. |
 | `serviceName` | Nome do serviço para acesso ao banco de dados. |
@@ -343,10 +345,10 @@ DevOps            → Diretório base das configurações para a automação via
 
 Foi implementado no repositório a facilidade da atualização automática do arquivo `CHANGELOG.md` com poucos passos sem ser necessário editar o arquivo MarkDown (md).
 
-1. Além dos dois arquivos de planejamento que estão dentro do diretório `DevOps/Plannings` existem mais dois arqwuivos que devem para a atualização do `CHANGELOG.md`. São eles: **`Update-Changelog.ps1`** que é um script do PowerShell que é quem efetivamente atualiza o arquivo e o outro arquivo é o **`Update-Changelog.vbs`** que funciona como um facilitador para a execução. Ambos os arquivos podem ser executados, porém p `ps1` necessita de uma janela do PowerShell aberta para execução, enquanto o `vbs` pode ser rodado direto com duplo-clique.
+1. Além dos dois arquivos de planejamento que estão dentro do diretório `DevOps/Plannings` existem mais dois arquivos que servem para a atualização do `CHANGELOG.md`. São eles: **`Update-Changelog.ps1`** que é um script do PowerShell que é quem efetivamente processa e atualiza o arquivo e o outro arquivo é o **`Update-Changelog.vbs`** que funciona como um facilitador para a execução do script ps1 e atualização do CHANGELOG.md, necessitando apenas um duplo-clique.
 2. O funcionamento é bastante simples:
-   - No momento da criação da branch, ambos os arquivos serão copiados para o repositório local;
-   - **Importante:** O arquivo Planning_Deploy.json deve ser atualizado de forma bastante detalhada e completa, pois o seu conteúdo irá figurar como o conteúdo do CHANGFELOG, logo, quanto mais detalhado melhor. Principalmente a TAG deve estar informada;
+   - No momento da criação da branch, ambos os arquivos estarão disponíveis no repositório local;
+   - **Importante:** O arquivo Planning_Deploy.json deve ser atualizado de forma bastante detalhada e completa, pois o seu conteúdo irá figurar como o conteúdo do CHANGELOG.md, logo, quanto mais detalhado melhor. Principalmente a TAG deve estar informada;
    - Após a atualização do Planning_Deploy e com o arquivo CHANGELOG.md na raiz do repositório, basta efetuar um duplo-clique no script sobre o arquivo do planejamento;
    - Feito. O arquivo CHANGELOG.md estará atualizado com a alteração que estará sendo feita.
 

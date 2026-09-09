@@ -53,7 +53,7 @@ Aqui será feito o registro de alterações, versões e objetos publicados em am
 
 ---
 
-## Início da Seção de Documentação de Alterações
+# Início da Seção de Documentação de Alterações
 
 ## [Não Publicado]
 
@@ -61,9 +61,7 @@ Aqui será feito o registro de alterações, versões e objetos publicados em am
 >
 > Listar aqui as alterações em desenvolvimento atualmente, mas ainda sem tag ou previsão para deploy.
 > 
-> Nesta seção cada objeto traz sua própria categoria e responsável, uma vez que convivem alterações de branches diferentes. Nas versões já publicadas esses dados são únicos para a tag e aparecem apenas no cabeçalho.
-
-Nesta seção cada objeto traz sua própria categoria e responsável, pois convivem alterações de branches diferentes. Nas versões já publicadas esses dados são únicos para a tag e aparecem apenas no cabeçalho.
+> Nesta seção cada objeto deve trazer seu próprio responsável e categoria, uma vez que convivem alterações de branches diferentes. Nas versões já publicadas esses dados são únicos para a tag e aparecem apenas no cabeçalho.
 
 **Exemplos (não publicado):**
 
@@ -79,13 +77,13 @@ Nesta seção cada objeto traz sua própria categoria e responsável, pois convi
 |--------|-----------|-------------|--------------|
 | `vw_clientes_ativos.sql` | bugfix | Tiago Gabriel | Remoção de `DISTINCT` desnecessário que causava full scan em `tb_cliente`. |
 
+---
+
 ## [v2026.08.25.01] → 2026-08-25
 
 **Responsável:** Tiago Gabriel<br>
 **Escopo:** Criação de package de teste para o Jenkins<br>
 **Categoria:** feature
-
----
 
 ### Adicionado
 

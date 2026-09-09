@@ -9,6 +9,21 @@
         "deploy": "Deploy",
         "revert": "Revert"
     },
+    "tiposObjeto": {
+        "Functions": "function",
+        "Indexes": "index",
+        "Java": "java",
+        "Jobs": "job",
+        "Packages": "package",
+        "Procedures": "procedure",
+        "Schedules": "schedule",
+        "Scripts": "script",
+        "Sequences": "sequence",
+        "Synonyms": "synonym",
+        "Tables": "table",
+        "Triggers": "trigger",
+        "Views": "view"
+    },
     "scripts": {
         "matarSessoes": "DevOps/Scripts/KillSessions.sql",
         "listarInvalidos": "DevOps/Scripts/ListInvalids.sql",

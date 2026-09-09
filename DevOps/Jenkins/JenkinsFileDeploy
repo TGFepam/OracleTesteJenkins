@@ -349,6 +349,14 @@ pipeline {
             steps {
                 script {
                     echo lib.line('Início da Validação dos Objetos Planejados Para Deploy')
+                    boolean validaScript
+
+                    // Verifica se o database selecionado está parametrizado para validação de caracteres
+                    if (!jsonConf.validarScripts.containsKey(Database)) {
+                        error lib.status('E', "Database ${Database} não parametrizado para validação de script no ConfigParam.json")
+                    }
+
+                    validaScript = jsonConf.validarScripts[Database]
 
                     jsonPlan.objetos.each { obj ->
                         echo lib.line("Verifica a existência do script: ${diretorioRaiz}/${obj.nome}")
@@ -363,8 +371,8 @@ pipeline {
 
                         // Valida o parâmetro tipo da mudança, caso tenha um específico para o objeto
                         if (obj.containsKey('tipoMudanca')) {
-                            if (jsonConf.valoresValidos.tipoMudanca[obj.tipoMudanca]) {
-                                texto << "Tipo de Mudança: ${obj.tipoMudanca} - ${jsonConf.valoresValidos.tipoMudanca[obj.tipoMudanca]}"
+                            if (jsonConf.valoresValidos.tipoMudanca.containsKey(obj.tipoMudanca)) {
+                                texto << lib.text("Tipo de Mudança: ${obj.tipoMudanca} - ${jsonConf.valoresValidos.tipoMudanca[obj.tipoMudanca]}")
                             } else {
                                 error lib.status('E', "Tipo de Mudança do objeto inválida: '${obj.tipoMudanca}' Informar: ${jsonConf.valoresValidos.tipoMudanca.keySet().join(', ')}")
                             }
@@ -375,12 +383,12 @@ pipeline {
                         echo lib.line('Verifica encoding do script')
                         lib.validateScriptEncoding("${diretorioRaiz}/${obj.nome}")
 
-                        if (jsonConf.validarScripts[Database]) {
+                        if (validaScript) {
                             echo lib.line('Verifica caracteres inválidos no script')
                             lib.validateScriptCharacters("${diretorioRaiz}/${obj.nome}")
                         }
                     }
-                    if (!jsonConf.validarScripts[Database]) {
+                    if (!validaScript) {
                         echo lib.status('A', 'Verificação de caracteres inválidos no script está desabilitada nos parâmetros')
                     }
                     echo lib.line('Final da Validação dos Objetos Planejados Para Deploy')
@@ -426,19 +434,25 @@ pipeline {
             steps {
                 script {
                     echo lib.line("Início do Deploy dos Objetos Planejados no Banco ${database.descricao}")
+                    String diretorio
                     String tipoObjeto
                     String retorno
 
                     jsonPlan.objetos.each { obj ->
-                        tipoObjeto = obj.nome.split('/')[0][0..-2].toLowerCase()
-
+                        diretorio = obj.nome.split('/')[0]
+                        if (!jsonConf.tiposObjeto.containsKey(diretorio)) {
+                            error lib.status('E', "Tipo de objeto inválido: '${diretorio}' Informar: ${jsonConf.tiposObjeto.keySet().join(', ')}")
+                        }
+                        // Singular em minúsculo
+                        tipoObjeto = jsonConf.tiposObjeto[diretorio]
+                        
                         texto = [
                             lib.text("Objeto: ${diretorioRaiz}/${obj.nome}"),
                             lib.text("Implementado: ${obj.implementado}")
                         ]
 
                         if (obj.containsKey('tipoMudanca')) {
-                            texto << "Tipo de Mudança: ${obj.tipoMudanca}"
+                            texto << lib.text("Tipo de Mudança: ${obj.tipoMudanca}")
                         }
 
                         echo lib.writeText(texto)
