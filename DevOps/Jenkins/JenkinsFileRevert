@@ -72,7 +72,7 @@ pipeline {
                     echo 'Realizando Checkout do Repositório'
 
                     // Verifica se o parâmetro Tag foi selecionado
-                    if (Tag == 'None' || Tag.trim().isEmpty()) {
+                    if (Tag == 'none' || Tag.trim().isEmpty()) {
                         error 'É necessário selecionar uma Tag para o checkout do repositório e revert!'
                     }
 
@@ -105,17 +105,17 @@ pipeline {
 
                     // Nome do arquivo de config
                     String confFile = 'DevOps/Jenkins/ConfigParam.json'
-                    echo "Processa arquivo JSON de parâmetros de configuração: ${confFile}"
+                    echo "Processa arquivo JSON: Parâmetros de Configuração: ${confFile}"
 
                     // Verifica se o arquivo JSON existe, se está válido e com dados
                     try {
-                        jsonConf = lib.parseJSON(confFile, 'dos parâmetros de configuração')
+                        jsonConf = lib.parseJSON(confFile, 'Parâmetros de Configuração')
                     } catch (Exception e) {
-                        echo lib.status('E', "Arquivo JSON de configuração não pode ser carregado:\n${e.getMessage()}")
-                        error lib.status('E', 'Falha lendo/parseando arquivos JSON de configuração')
+                        echo lib.status('E', "Arquivo JSON: Parâmetros de Configuração - não pode ser carregado:\n${e.getMessage()}")
+                        error lib.status('E', 'Falha lendo/parseando arquivo JSON: Parâmetros de Configuração')
                     }
 
-                    // Inicializa a variável que determina a criação do log da biblioteca
+                    // Inicializa a variável que determina a criação do log do job
                     lib.log.create = jsonConf.gerarLog
 
                     if (!lib.log.create) {
@@ -132,9 +132,9 @@ pipeline {
                         try {
                             lib.createLog(
                                 action     : 'revert',
+                                tag        : Tag,
                                 database   : Database,
                                 username   : lib.getBuildStarter(),
-                                tag        : Tag,
                                 buildNumber: env.BUILD_NUMBER,
                                 jobName    : env.JOB_NAME,
                                 workspace  : env.WORKSPACE
@@ -168,8 +168,8 @@ pipeline {
 
                     // Verifica se os arquivos JSON existem, se estão válidos e com dados
                     try {
-                        jsonData = lib.parseJSON(dataFile, 'do banco de dados')
-                        jsonPlan = lib.parseJSON(planFile, 'do planejamento para o revert')
+                        jsonData = lib.parseJSON(dataFile, 'Banco de Dados')
+                        jsonPlan = lib.parseJSON(planFile, 'Planejamento do Revert')
                     } catch (Exception e) {
                         echo lib.status('E', "Não foi possível ler/parsear os arquivos JSON:\n${e.getMessage()}")
                         error 'Falha lendo/parseando arquivos JSON'
@@ -188,7 +188,7 @@ pipeline {
 
                     // Valida a Tag selecionada com a Tag do planejamento
                     if (jsonPlan.tag != Tag) {
-                        error lib.status('E', "Tag do planejamento ${jsonPlan.tag} é diferente da tag parametrizada ${Tag}")
+                        error lib.status('E', "Tag do planejamento ${jsonPlan.tag} é diferente da tag selecionada ${Tag}")
                     }
 
                     // Valida a categoria
@@ -319,7 +319,7 @@ pipeline {
                         // Valida o parâmetro tipo da mudança, caso tenha um específico para o objeto
                         if (obj.containsKey('tipoMudanca')) {
                             if (jsonConf.valoresValidos.tipoMudanca[obj.tipoMudanca]) {
-                                texto << "Tipo de Mudança: ${obj.tipoMudanca}"
+                                texto << "Tipo de Mudança: ${obj.tipoMudanca} - ${jsonConf.valoresValidos.tipoMudanca[obj.tipoMudanca]}"
                             } else {
                                 error lib.status('E', "Tipo de Mudança do objeto inválida: '${obj.tipoMudanca}' Informar: ${jsonConf.valoresValidos.tipoMudanca.keySet().join(', ')}"
                             }
@@ -552,8 +552,8 @@ pipeline {
                         lib.flushLog()
                         lib.finishLog(
                             action        : 'Revert',
-                            database      : Database,
                             tag           : Tag,
+                            database      : Database,
                             categoria     : jsonPlan?.categoria,
                             tipoMudanca   : jsonPlan?.tipoMudanca,
                             buildNumber   : env.BUILD_NUMBER,

@@ -33,7 +33,7 @@ List<String> checkErrors = [
 --------------------------------------------------*/
 Map parseJSON(String jsonFile, String description) {
     List<String> text = [
-        "Arquivo JSON ${description}"
+        "Arquivo JSON: ${description}"
     ]
     if (fileExists(file: jsonFile)) {
         text << 'Arquivo encontrado'
@@ -45,7 +45,7 @@ Map parseJSON(String jsonFile, String description) {
         } else {
             text << 'Arquivo inválido ou vazio!'
             echo text.join('\n')
-            error "Arquivo JSON ${description} inválido ou vazio"
+            error "Arquivo JSON: ${description} - inválido ou vazio"
         }
     } else {
         text << 'Arquivo não encontrado'
@@ -305,9 +305,9 @@ void createLog(Map args) {
     // Extrai os parâmetros nomeados do Map.
     //String action      = args.action ?: 'deploy' // Para definir um valor padrão
     String action      = args.action
+    String tag         = args.tag
     String database    = args.database
     String username    = args.username
-    String tag         = args.tag
     String buildNumber = args.buildNumber
     String jobName     = args.jobName
     String workspace   = args.workspace
@@ -336,9 +336,10 @@ void createLog(Map args) {
     // Prepara o cabeçalho
     log.text = [
         '------------------------------',
-        "Username : ${username}",
+        "Action   : ${action}",
         "Tag      : ${tag}",
         "Database : ${database}",
+        "Username : ${username}",
         "Build #  : ${buildNumber}",
         "Job Name : ${jobName}",
         "WorkSpace: ${workspace}",
@@ -353,7 +354,7 @@ void createLog(Map args) {
         writer.writeLine(log.text.join('\n'))  // Adiciona o cabeçalho
     }
 
-    // Limpa a variável de bloco após a escrita
+    // Limpa a variável do bloco após a escrita
     log.text.clear()
 }
 
@@ -444,8 +445,8 @@ void finishLog(Map args) {
     // Extrai os parâmetros nomeados do Map.
     //def action             = args.action ?: 'deploy' // Para definir um valor padrão
     String action          = args.action
-    String database        = args.database
     String tag             = args.tag
+    String database        = args.database
     String categoria       = args.categoria
     String tipoMudanca     = args.tipoMudanca
     String buildNumber     = args.buildNumber
@@ -464,8 +465,8 @@ void finishLog(Map args) {
     if (packageParcial) {
         log.text << 'Package criada parcialmente'
     }
-    log.text << "Database : ${database}"
     log.text << "Tag      : ${tag}"
+    log.text << "Database : ${database}"
     log.text << "Categoria: ${categoria}"
     log.text << "Mudança  : ${tipoMudanca}"
     log.text << "Build #  : ${buildNumber}"

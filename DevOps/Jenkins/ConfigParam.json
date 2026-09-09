@@ -2,8 +2,8 @@
     "gerarLog": true,
     "consistirRevert": true,
     "validarScripts": {
-        "homologa": true,
-        "fprod": true
+        "fprod": true,
+        "homologa": true
     },
     "diretoriosRaiz": {
         "deploy": "Deploy",
