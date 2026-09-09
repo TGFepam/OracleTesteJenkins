@@ -8,18 +8,18 @@
 
 ---
 
-### Implementação Informada no Planejamento
+### Tag Prevista
+
+**`v____.__.__.__`**
+
+---
+
+### Categoria Informada no Planejamento
 
 - [ ] **`feature`**
 - [ ] **`release`**
 - [ ] **`bugfix`**
 - [ ] **`hotfix`**
-
----
-
-### Tag Prevista
-
-**`v____.__.__.__`**
 
 ---
 
