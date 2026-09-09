@@ -5,9 +5,12 @@
 
 ## Repositório oficial dos códigos-fonte SQL e PL/SQL dos bancos de dados Oracle
 
-### Pipelines de deploy e revert automatizados via **Orquestrador Jenkins**<br><br>
+### Pipelines de deploy e revert automatizados via **Orquestrador Jenkins**
+
+---
 
 > [!TIP]
+>
 > ###  Histórico de Versões
 >
 > Para acessar o histórico de entregas, tags e atualizações recentes, consulte o [CHANGELOG.md](CHANGELOG.md).
@@ -69,6 +72,19 @@ OracleDatabase_CI_CD  → Diretório raiz do repositório
 
 </details>
 
+> [!NOTE]
+>
+> ### Arquivos `.gitkeep`
+>
+> Os subdiretórios dos tipos de objeto em **`Deploy/`** e **`Revert/`** contêm um arquivo vazio chamado
+> **`.gitkeep`** dentro deles. Como o Git não versiona diretórios vazios (não mantém no repositório),
+> é necessário ter pelo menos um arquivo dentro dele para que ele não deixe de existir.
+>
+> O **`.gitkeep`** garante que toda a estrutura de tipos de objeto (todos os diretórios) esteja sempre
+> disponível ao clonar o repositório, evitando que seja necessário criar diretórios manualmente ao ser
+> necessário adicionar um objeto específico ou um script de reversão. **Estes arquivos não devem ser
+> excluídos.**
+
 ---
 
 ## Como Contribuir
@@ -98,7 +114,10 @@ git tag --list "v$(Get-Date -Format 'yyyy.MM.dd').*" --sort=-v:refname
 >
 > ### Informações do Planning_Deploy.json
 >
-> Para que informações corretas, detalhadas e descritivas das alterações efetuadas no banco de dados sejam inseridas no [CHANGELOG.md](CHANGELOG.md) é imprescindível que o arquivo de planejamento do deploy seja preenchido da melhor e mais detalhada forma possível, restando apenas a execução de um script para a atualização das informações.
+> Para que informações corretas, detalhadas e descritivas das alterações efetuadas no banco de dados sejam
+> inseridas no [CHANGELOG.md](CHANGELOG.md) é imprescindível que o arquivo de planejamento do deploy seja
+> preenchido da melhor e mais detalhada forma possível, restando apenas a execução de um script para a
+> atualização das informações.
 
 ---
 
@@ -227,9 +246,11 @@ DevOps            → Diretório base das configurações para a automação via
 ---
 
 > [!WARNING]
+>
 > ### Restrição a arquivos
 >
-> Os arquivos localizados em **`DevOps/HealthServer`**, **`DevOps/Jenkins/`** e **`DevOps/Scripts/`** são de uso interno para configuração do pipeline do Jenkins e **não devem ser alterados** manualmente.
+> Os arquivos localizados em **`DevOps/HealthServer`**, **`DevOps/Jenkins/`** e **`DevOps/Scripts/`** são de
+> uso interno para configuração do pipeline do Jenkins e **não devem ser alterados** manualmente.
 
 ---
 
@@ -281,7 +302,7 @@ DevOps            → Diretório base das configurações para a automação via
 | `diretoriosRaiz.deploy` | Local do diretório raiz de deploy para os scripts a serem executados. |
 | `diretoriosRaiz.revert` | Local do diretório raiz de reversão para os scripts a serem executados. |
 | `scripts.matarSessoes` | Local e nome do script utilizado para matar as sessões do banco de dados de acordo com o parâmetro. |
-| `scripts.listarInvalidos` | Local e nome do script de banco de dados para listar os objetos e artefatos inválidos após a aplocação. |
+| `scripts.listarInvalidos` | Local e nome do script de banco de dados para listar os objetos e artefatos inválidos após a aplicação. |
 | `scripts.compilarObjetos` | Local e nome do script de banco de dados para executar a compilação dos objetos inválidos no banco de dados após a aplicação. |
 | `valoresValidos` | Listas dos valores válidos dos parâmetros de **Planejamentos** e **Revert**. |
 | `valoresValidos.categoria` | Lista de todas as categorias válidas como parâmetros do processamento. |
@@ -325,10 +346,10 @@ DevOps            → Diretório base das configurações para a automação via
 
 | Bancos | Descrição |
 |--------|-----------|
-| **`fprod`** | Banco de dados de produção. |
-| **`homologa`** | Banco de dados de homologação. |
-| **`hmlforms`** | Banco de dados de homologação do Forms 12c. |
-| **`fepdev`** | Banco de dados de desenvolvimento. |
+| `fprod` | Banco de dados de produção. |
+| `homologa` | Banco de dados de homologação. |
+| `hmlforms` | Banco de dados de homologação do Forms 12c. |
+| `fepdev` | Banco de dados de desenvolvimento. |
 
 
 | Campos | Descrição |

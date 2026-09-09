@@ -14,7 +14,8 @@ Aqui será feito o registro de alterações, versões e objetos publicados em am
 
 > [!TIP]
 > 
-> A atualização deste arquivo pode ser feita através de um processo automatizado que utiliza um script que lê o arquivo **`Planning_Deploy.json`** e faz a transferência das informações.
+> A atualização deste arquivo pode ser feita através de um processo automatizado que utiliza um script que lê
+> o arquivo **`Planning_Deploy.json`** e faz a transferência das informações.
 
 ---
 
@@ -22,21 +23,26 @@ Aqui será feito o registro de alterações, versões e objetos publicados em am
 >
 > ### Tabelas de Parâmetros Válidos
 >
-> Nos arquivos de planejamento devem ser informados dois parâmetros indicando a **Categoria** do desenvolvimento e o **Tipo de Mudança** realizada.
+> Nos arquivos de planejamento devem ser informados dois parâmetros indicando a **Categoria** do
+> desenvolvimento e o **Tipo de Mudança** realizada.
 >
-> A **Categoria** é única para o planejamento como um todo, porém o **Tipo de Mudança** funciona da seguinte forma: a informação contida na raiz do planejamento é geral para todos os objetos planejados, porém, caso algum objeto tenha um **Tipo de Mudança** específico diferente do geral, este deve ser definido junto ao objeto e irá sobrepor o **Tipo** geral.
+> A **Categoria** é única para o planejamento como um todo, porém o **Tipo de Mudança** funciona da seguinte
+> forma: a informação contida na raiz do planejamento é geral para todos os objetos planejados, porém, caso
+> algum objeto tenha um **Tipo de Mudança** específico diferente do geral, este deve ser definido junto ao
+> objeto e irá sobrepor o **Tipo** geral.
 >
-> Estas duas tabelas abaixo listam os valores válidos dos parâmetros do planejamento. Qualquer valor diferente destes listados aqui será considerado erro e o deploy será abortado.
+> Estas duas tabelas abaixo listam os valores válidos dos parâmetros do planejamento. Qualquer valor
+> diferente destes listados aqui será considerado erro e o deploy será abortado.
 
 
 ### Tipos de Categoria Previstas
 
 | Tipo | Quando usar |
 |------|-------------|
-| **`feature`** | Novas funcionalidades, ferramentas ou melhorias planejadas. |
-| **`release`** | Preparação final e homologação de uma nova versão do sistema para produção. |
-| **`bugfix`** | Correção de erros encontrados durante a fase de testes ou homologação antes da publicação em produção. |
-| **`hotfix`** | Correções urgentes, críticas e graves que precisam ser feitas diretamente no código que já está em produção. |
+| `feature` | Novas funcionalidades, ferramentas ou melhorias planejadas. |
+| `release` | Preparação final e homologação de uma nova versão do sistema para produção. |
+| `bugfix` | Correção de erros encontrados durante a fase de testes ou homologação antes da publicação em produção. |
+| `hotfix` | Correções urgentes, críticas e graves que precisam ser feitas diretamente no código que já está em produção. |
 
 ---
 
@@ -44,12 +50,12 @@ Aqui será feito o registro de alterações, versões e objetos publicados em am
 
 | Tipo | Quando usar |
 |------|-------------|
-| **`Adicionado`** | Para novas funcionalidades, novos objetos ou recursos: tables, packages, procedures, functions, indexes, views, jobs, etc. |
-| **`Alterado`** | Para alterações em funcionalidades existentes, mudança de comportamento, regra de negócio ou alterações em recursos. |
-| **`Descontinuado`** | Para funcionalidades que estão para serem removidas, objetos ou recursos que ainda existem, mas serão removidos nas próximas versões em deploy futuro (registrar prazo). |
-| **`Removido`** | Para funcionalidades removidas nesta versão, objetos ou recursos efetivamente removidos. |
-| **`Corrigido`** | Para qualquer tipo de correção de bug, performance ou dado inconsistente. |
-| **`Segurança`** | Em caso de vulnerabilidades, privilégios, roles, auditoria e acessos. |
+| `Adicionado` | Para novas funcionalidades, novos objetos ou recursos: tables, packages, procedures, functions, indexes, views, jobs, etc. |
+| `Alterado` | Para alterações em funcionalidades existentes, mudança de comportamento, regra de negócio ou alterações em recursos. |
+| `Descontinuado` | Para funcionalidades que estão para serem removidas, objetos ou recursos que ainda existem, mas serão removidos nas próximas versões em deploy futuro (registrar prazo). |
+| `Removido` | Para funcionalidades removidas nesta versão, objetos ou recursos efetivamente removidos. |
+| `Corrigido` | Para qualquer tipo de correção de bug, performance ou dado inconsistente. |
+| `Segurança` | Em caso de vulnerabilidades, privilégios, roles, auditoria e acessos. |
 
 ---
 
@@ -59,9 +65,12 @@ Aqui será feito o registro de alterações, versões e objetos publicados em am
 
 > [!NOTE]
 >
-> Listar aqui as alterações em desenvolvimento atualmente, mas ainda sem tag ou previsão para deploy.
+> Listar aqui na seção **[Não Publicado]** as alterações em desenvolvimento atualmente, mas ainda sem tag ou
+> previsão para deploy.
 > 
-> Nesta seção cada objeto deve trazer seu próprio responsável e categoria, uma vez que convivem alterações de branches diferentes. Nas versões já publicadas esses dados são únicos para a tag e aparecem apenas no cabeçalho.
+> Nesta seção cada objeto deve trazer seu próprio responsável e categoria, uma vez que convivem alterações de
+> branches diferentes. Nas versões já publicadas esses dados são únicos para a tag e aparecem apenas no
+> cabeçalho.
 
 **Exemplos (não publicado):**
 

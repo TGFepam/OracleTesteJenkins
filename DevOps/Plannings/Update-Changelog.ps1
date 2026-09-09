@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Gera a entrada do CHANGELOG.md a partir dos planejamentos de deploy e revert.
 
@@ -60,6 +60,9 @@ Set-StrictMode -Version Latest
 # aqui produziria uma segunda quebra, com espaçamento duplo.
 # Se o seu renderizador juntar os campos numa linha só, use "<br>".
 $QUEBRA_LINHA = "<br>"
+
+# Separador entre a tag e a data no título da versão.
+$SEPARADOR_TITULO = "→"
 
 # Texto usado para marcar e detectar uma tag revertida.
 $MARCA_REVERT = "Revertido"
@@ -342,7 +345,7 @@ if ($Revert) {
 
 $sb = [System.Text.StringBuilder]::new()
 
-[void]$sb.AppendLine("## [$tag] → $dataPlano")
+[void]$sb.AppendLine("## [$tag] $SEPARADOR_TITULO $dataPlano")
 [void]$sb.AppendLine("")
 [void]$sb.AppendLine("**${ROTULO_RESPONSAVEL}:** $responsavel$QUEBRA_LINHA")
 [void]$sb.AppendLine("**${ROTULO_ESCOPO}:** $escopo$QUEBRA_LINHA")
@@ -404,13 +407,22 @@ foreach ($m in [regex]::Matches($conteudo, '(?m)^##\s*\[(v\d{4}\.\d{2}\.\d{2}\.\
 }
 
 if ($pos -ge 0) {
-    $novo = $conteudo.Substring(0, $pos) +
-            $blocoNormalizado + $eol + $eol + "---" + $eol + $eol +
-            $conteudo.Substring($pos)
+    $antes  = $conteudo.Substring(0, $pos).TrimEnd()
+    $depois = $conteudo.Substring($pos)
 } else {
     # Nenhuma versão registrada, ou todas mais recentes: acrescenta no fim.
-    $novo = $conteudo.TrimEnd() + $eol + $eol + $blocoNormalizado + $eol + $eol + "---" + $eol
+    $antes  = $conteudo.TrimEnd()
+    $depois = ""
 }
+
+# A entrada fica delimitada por um traço em cima e um embaixo. O de cima só é
+# acrescentado quando o conteúdo anterior ainda não termina com um.
+$sepAntes = if ($antes.EndsWith("---")) { "" } else { "---" + $eol + $eol }
+
+$novo = $antes + $eol + $eol +
+        $sepAntes +
+        $blocoNormalizado + $eol + $eol + "---" + $eol +
+        $(if ($depois) { $eol + $depois } else { "" })
 
 # UTF-8 sem BOM. Set-Content -Encoding UTF8 grava COM BOM no PowerShell 5.1.
 $semBom = New-Object System.Text.UTF8Encoding $false
