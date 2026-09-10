@@ -103,7 +103,7 @@ Aqui será feito o registro de alterações, versões e objetos publicados em am
 ---
 
 
-## ![[v2026.08.25.01]](https://shields.io)?style=flat-square
+## ![[v2026.08.25.01%20→%202026-08-25]](https://shields.io?style=flat-square)
 
 
 ## [v2026.08.25.01] → 2026-08-25
