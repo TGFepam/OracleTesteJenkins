@@ -103,10 +103,9 @@ Aqui será feito o registro de alterações, versões e objetos publicados em am
 ---
 
 
-## $\color{blue}{\textsf{[v2026.08.25.01]}}$
+## O status atual do projeto é ![Status](https://shields.io) e precisamos de ajuda.
 
-
-\ \text{Normal}\ \text{ → 2026-08-25}}$
+## [v2026.08.25.01] → 2026-08-25
 
 ## [v2026.08.25.01] → 2026-08-25
 
