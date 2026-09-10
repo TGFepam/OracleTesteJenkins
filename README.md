@@ -1,3 +1,4 @@
+
 # ![Database](https://api.iconify.design/mdi:database.svg?height=32&color=%23F80000) OracleDatabase_CI_CD
 
 [![Oracle](https://img.shields.io/badge/Oracle-12c-F80000?logo=oracle&logoColor=white)](https://www.oracle.com/database/)<br>
@@ -7,6 +8,8 @@
 
 ### Pipelines de deploy e revert automatizados via **Orquestrador Jenkins**
 
+---
+Este é um texto <span style="color:red">Vermelho</span> e este é <span style="color:#2ea44f">Verde</span>.
 ---
 
 > [!TIP]
