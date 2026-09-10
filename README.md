@@ -9,8 +9,6 @@
 ### Pipelines de deploy e revert automatizados via **Orquestrador Jenkins**
 
 ---
-Este é um texto <span style="color:red">Vermelho</span> e este é <span style="color:#2ea44f">Verde</span>.
----
 
 > [!TIP]
 >
