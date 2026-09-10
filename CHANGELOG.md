@@ -103,7 +103,8 @@ Aqui será feito o registro de alterações, versões e objetos publicados em am
 ---
 
 
-![GitHub deployments](https://img.shields.io/github/deployments/:user/:repo/:environment)
+## ![[v2026.08.25.01]](https://shields.io)?style=flat-square
+
 
 ## [v2026.08.25.01] → 2026-08-25
 
