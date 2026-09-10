@@ -102,6 +102,9 @@ Aqui será feito o registro de alterações, versões e objetos publicados em am
 
 ---
 
+## <ins>[v2026.08.25.01] → 2026-08-25</ins>
+
+
 ## [v2026.08.25.01] → 2026-08-25
 
 **Responsável:** Tiago Gabriel<br>
