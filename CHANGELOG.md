@@ -102,7 +102,7 @@ Aqui será feito o registro de alterações, versões e objetos publicados em am
 
 ---
 
-## $\color{blue}{\text{[v2026.08.25.01] → 2026-08-25}}$
+## $\color{blue}{\textf{[v2026.08.25.01] → 2026-08-25}}$
 
 ## [v2026.08.25.01] → 2026-08-25
 
