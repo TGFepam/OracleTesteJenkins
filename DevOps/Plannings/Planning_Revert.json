@@ -1,10 +1,10 @@
 {
     "responsavel": "Tiago Gabriel",
-    "dataPlano": "2026-08-25",
+    "dataPlano": "2026-09-09",
     "escopo": "Criação de package de teste para o Jenkins",
-    "tag": "v2026.08.25.01",
+    "tag": "v2026.09.09.01",
     "categoria": "feature",
-    "tipoMudanca": "Corrigido",
+    "tipoMudanca": "Removido",
     "acoes": {
         "matarSessoes": false,
         "listarInvalidos": true,
@@ -12,13 +12,8 @@
     },
     "objetos": [
         {
-            "nome": "Packages/pck_teste_jenkins.pck",
-            "implementado": "Criar package para testes no Jenkins",
-            "tipoMudanca": "Adicionado"
-        },
-        {
-            "nome": "Packages/pck_teste_validacao.pck",
-            "implementado": "Corrigir package para testes para validação"
+            "nome": "Scripts/S_20260909_01_TG_DropPackage_pck_teste_jenkins",
+            "implementado": "Remover package para testes no Jenkins"
         }
     ]
 }
