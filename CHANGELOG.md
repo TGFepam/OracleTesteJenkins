@@ -88,6 +88,20 @@ Aqui será feito o registro de alterações, versões e objetos publicados em am
 
 ---
 
+## [v2026.09.09.01] → 2026-09-09
+
+**Responsável:** Tiago Gabriel<br>
+**Escopo:** Criação de package de teste para o Jenkins<br>
+**Categoria:** feature
+
+### Adicionado
+
+| Objeto | Implementado |
+|--------|--------------|
+| `pck_teste_jenkins.pck` | Criar package para testes no Jenkins |
+
+---
+
 ## [v2026.08.25.01] → 2026-08-25
 
 **Responsável:** Tiago Gabriel<br>
